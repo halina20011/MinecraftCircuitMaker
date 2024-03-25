@@ -1,0 +1,2 @@
+Floorplanning chip design
+http://vlsicad.eecs.umich.edu/KLMH/downloads/book/chapter3/chap3-orig.pdf

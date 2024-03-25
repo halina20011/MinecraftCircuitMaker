@@ -7,9 +7,11 @@
     "}\n"
 
 #define VERTEX_SHADER "#version 330 core\n"\
-    "in vec2 position;\n"\
-    "uniform mat4 transform;\n"\
+    "in vec3 position;\n"\
+    "uniform mat4 model;\n"\
+    "uniform mat4 view;\n"\
+    "uniform mat4 projection;\n"\
+    "\n"\
     "void main(){\n"\
-    "    vec4 pos  = transform * vec4(position.x, position.y, 0.0, 1.0);\n"\
-    "    gl_Position = vec4(pos.x - 1, pos.y - 1, pos.z, pos.a);\n"\
+    "    gl_Position = projection * view * model * vec4(position, 1.0);\n"\
     "}\n"

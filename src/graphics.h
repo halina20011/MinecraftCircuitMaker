@@ -11,10 +11,14 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 
 #include "./shaders.h"
+#include "./cube.h"
 
-#define WINDOW_WIDTH 800
-#define WINDOW_HEIGHT 800
+#define WINDOW_WIDTH 1362
+#define WINDOW_HEIGHT 716
 
 void graphicsInit();
+
+void drawLine(int x1, int y1, int z1, int x2, int y2, int z2);

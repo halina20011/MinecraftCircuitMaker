@@ -14,8 +14,8 @@ db:
 	@echo $(OBJECTS)
 	@echo $(LDFLAGS)
 
-build/main.o: src/shaders.h
-	@echo "shader was updated"
+# build/main.o: src/shaders.h
+# 	@echo "shader was updated"
 
 build/%.o: src/%.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<;

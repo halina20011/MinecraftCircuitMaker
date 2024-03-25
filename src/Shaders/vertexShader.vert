@@ -1,7 +1,9 @@
 #version 330 core
-in vec2 position;
-uniform mat4 transform;
+in vec3 position;
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
+
 void main(){
-    vec4 pos  = transform * vec4(position.x, position.y, 0.0, 1.0);
-    gl_Position = vec4(pos.x - 1, pos.y - 1, pos.z, pos.a);
+    gl_Position = projection * view * model * vec4(position, 1.0);
 }
