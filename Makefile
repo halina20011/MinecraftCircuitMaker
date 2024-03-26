@@ -2,7 +2,10 @@ CC = gcc
 
 FILES = $(wildcard ./src/*.c)
 OBJECTS = $(patsubst ./src/%.c, ./build/%.o, $(FILES))
-LDFLAGS = -lc -lm $(shell pkg-config --libs cglm) $(shell pkg-config --static --libs glew) $(shell pkg-config --libs glfw3)
+LDFLAGS = -lc -lm $(shell pkg-config --libs cglm) \
+		  	$(shell pkg-config --static --libs glew) \
+			$(shell pkg-config --libs glfw3) \
+			$(shell pkg-config --libs assimp) \
 
 CPPFLAGS =
 CFLAGS = -Wall -Wextra -Wshadow

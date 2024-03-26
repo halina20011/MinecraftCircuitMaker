@@ -12,7 +12,6 @@ void arrowInit(int arrowHeight, int angle){
     glDrawArrays(GL_LINES, 0, 2);
 }
 
-
 void drawGrid(int X, int Y, int Z, int width, int depth, int height){
     for(int z = 0; z < height; z++){
         for(int y = 0; y < depth; y++){
