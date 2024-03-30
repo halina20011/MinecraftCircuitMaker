@@ -1,3 +1,6 @@
+#ifndef MODEL
+#define MODEL
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -37,3 +40,5 @@ struct Mesh{
 
 struct Mesh *meshInit(struct Vertex *vertices, size_t verticesSize, unsigned int *indices, size_t indicesSize, struct Texture *textures);
 void meshSetup(struct Mesh *mesh);
+
+#endif

@@ -31,8 +31,11 @@ flags =
 run: main
 	./build/main $(flags)
 
+blocks: includeFile.c
+	gcc includeFile.c -o ./build/includeFile && ./build/includeFile | tee src/blocks.h
+
 shaders: makeShaders.c
-	gcc makeShaders.c -o ./build/makeShaders && ./build/makeShaders | tee src/shaders.h
+	gcc makeShaders.c -o ./build/makeShaders && ./build/makeShaders | tee src/shadersDef.h
 
 debug: CFLAGS += -O0 -ggdb
 debug: main
