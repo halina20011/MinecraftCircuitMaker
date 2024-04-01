@@ -26,12 +26,6 @@ struct Ui *uiInit(GLFWwindow *w){
 
     ui->root = root;
 
-    glGenVertexArrays(1, &ui->vao);
-    glBindVertexArray(ui->vao);
-
-    glGenBuffers(1, &ui->vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, ui->vbo);
-
     struct Shader *uiShader = shaderInit(VERTEX_UI_SHADER, FRAGMENT_UI_SHADER);
     ui->shader = uiShader;
 
@@ -48,7 +42,7 @@ struct Ui *uiInit(GLFWwindow *w){
 }
 
 void uiElementCalc(struct Ui *ui, struct UiElement *element){
-    if(element->posType == RELATIVE){
+    if(element->posType == RELATIVE_PX){
        element->x = element->parent->x + element->iX;
        element->y = element->parent->y + element->iY;
     }
@@ -91,15 +85,13 @@ void uiElementCalc(struct Ui *ui, struct UiElement *element){
     // }
 }
 
+// to 0 -> size = -1 -> 1
 float normalizeX(float val, float size){
-    // to 0 -> size = -1 -> 1
-    // return (val / size * 2.0) - 1.0f;
     return (val / size * 2.0) - 1.0f;
 }
 
 float normalizeY(float val, float size){
-    // return (val / size - 1.0f) * -2.0f;
-    return (val / size) * 2.0f - 1.0f;
+    return ((val / size) * 2.0f - 1.0f) * -1.0f;
 }
 
 void printVertexData(float *data){
@@ -117,7 +109,7 @@ void printVertexData(float *data){
 void uiBake(struct Ui *ui){
     glfwGetFramebufferSize(ui->window, &ui->width, &ui->height);
     struct UiElement *root = ui->root;
-    root->posType = ABSOLUTE;
+    root->posType = ABSOLUTE_PX;
     root->iX = 0;
     root->iY = 0;
     root->sizeType = PX;
@@ -196,6 +188,7 @@ struct UiElement *uiElementInit(struct Ui *ui){
     struct UiElement *element = malloc(sizeof(struct UiElement));
     
     element->id = ui->idCounter++;
+    element->level = 0;
     printf("new element %zu\n", element->id);
     vectorPush(ui->uiElements, element);
     element->parent = NULL;
@@ -209,6 +202,7 @@ struct UiElement *uiAddElement(struct UiElement *element, struct UiElement *pare
     if(parent){
         parent->childrenSize++;
         element->parent = parent;
+        element->level = parent->level + 1;
     }
 
     element->iX = x;

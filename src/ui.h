@@ -34,8 +34,10 @@
 
 // pos type
 enum{
-    RELATIVE,
-    ABSOLUTE
+    RELATIVE_PX,
+    RELATIVE_PERCENTAGE,
+    ABSOLUTE_PX,
+    ABSOLUTE_PERCENTAGE,
 };
 
 // size type
@@ -65,12 +67,12 @@ struct Ui{
 
     float *data;
     size_t bakeSize;
-    GLuint vao, vbo;
     struct Shader *shader;
 };
 
 struct UiElement{
     size_t id;
+    size_t level;
     struct UiElement *parent;
     struct UiElement **children;
     size_t childrenSize;

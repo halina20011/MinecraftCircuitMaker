@@ -21,11 +21,6 @@ GLint compileShader(const char *shaderSource, int type){
 
 struct Shader *shaderInit(const char vertexShaderSource[], const char fragmentShaderSource[]){
     struct Shader *s = malloc(sizeof(struct Shader));
-    glGenVertexArrays(1, &s->vao);
-    glBindVertexArray(s->vao);
-
-    glGenBuffers(1, &s->vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, s->vbo);
 
     GLint vertexShader = compileShader(vertexShaderSource, GL_VERTEX_SHADER);
     GLint fragmentShader = compileShader(fragmentShaderSource, GL_FRAGMENT_SHADER);
@@ -35,11 +30,8 @@ struct Shader *shaderInit(const char vertexShaderSource[], const char fragmentSh
     glAttachShader(s->program, vertexShader);
     glAttachShader(s->program, fragmentShader);
 
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-
     glLinkProgram(s->program);
-    
+
     int status;
     glGetProgramiv(s->program, GL_LINK_STATUS, &status);
     if(!status){
@@ -49,8 +41,17 @@ struct Shader *shaderInit(const char vertexShaderSource[], const char fragmentSh
         exit(1);
     }
 
-    glUseProgram(s->program);
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
 
+    glGenVertexArrays(1, &s->vao);
+    glBindVertexArray(s->vao);
+
+    glGenBuffers(1, &s->vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, s->vbo);
+
+    glUseProgram(s->program);
+    
     return s;
 }
 
@@ -59,7 +60,7 @@ GLint getUniformLocation(struct Shader *shader, const GLchar *name){
     GLint _uniformLocation = glGetUniformLocation(shader->program, name);
     if(_uniformLocation == -1){
         fprintf(stderr, "failed to get uniform location from \"%s\"\n", name);
-        exit(-1);
+        // exit(-1);
     }
 
     return _uniformLocation;

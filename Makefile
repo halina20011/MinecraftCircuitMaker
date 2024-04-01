@@ -37,6 +37,13 @@ blocks: includeFile.c
 shaders: makeShaders.c
 	gcc makeShaders.c -o ./build/makeShaders && ./build/makeShaders | tee src/shadersDef.h
 
+bitmap: bitmapFont.c
+	gcc $(shell pkg-config --cflags --libs freetype2) bitmapFont.c -o ./build/bitmapFont && ./build/bitmapFont
+
+viewBitmap: bitmap
+	magick -size 128x12160 -depth 8 gray:src/bitmap.raw build/preview.png
+	feh ./build/preview.png
+
 debug: CFLAGS += -O0 -ggdb
 debug: main
 	@echo ${DARGS}

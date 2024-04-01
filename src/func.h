@@ -23,4 +23,6 @@ void cursorPosCallback(GLFWwindow *w, double x, double y);
 void scrollCallback(GLFWwindow *w, double x, double y);
 void framebufferSizeCallback(GLFWwindow *w, int width, int height);
 
+uint8_t *readFile(const char fileName[]);
+
 #endif

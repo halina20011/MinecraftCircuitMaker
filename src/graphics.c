@@ -74,15 +74,15 @@ struct Graphics *graphicsInit(){
         exit(1);
     }
 
-    // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_DEBUG_OUTPUT);
+    glDebugMessageCallback(messageCallback, 0);
+
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
     // glEnable(GL_SCISSOR_TEST);
 
-    glEnable(GL_DEBUG_OUTPUT);
-    glDebugMessageCallback(messageCallback, 0);
-
-    glClearColor(0, 0, 0,1);
+    glClearColor(0, 0, 0, 1);
     
     // const size_t cubePositionsSize = 0;
 

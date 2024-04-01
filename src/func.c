@@ -139,4 +139,3 @@ void framebufferSizeCallback(GLFWwindow *w, int width, int height){
     g->screenRatio = (float)width / (float)height;
     glViewport(0, 0, width, height);
 }
-

@@ -7,6 +7,7 @@
 
 #include "func.h"
 #include "ui.h"
+#include "text.h"
 
 #define COLOR(val) glUniform3fv(colorUniform, 1, (float*)val)
 
@@ -31,11 +32,11 @@ size_t cubeSize;
 
 void defineUi(struct Ui *ui){
     struct UiElement *blockHolder = uiElementInit(ui);
-    uiAddElement(blockHolder, ui->root, ABSOLUTE, PERCENTAGE, 10, 20, 20, 90);
+    uiAddElement(blockHolder, ui->root, ABSOLUTE_PERCENTAGE, PERCENTAGE, 10, 20, 20, 90);
     
     struct UiElement *blockHolder2 = uiElementInit(ui);
     blockHolder2->color = (struct ElementColor){255, 0, 0};
-    uiAddElement(blockHolder2, ui->root, RELATIVE, PERCENTAGE, 500, 10, 20, 90);
+    uiAddElement(blockHolder2, blockHolder, RELATIVE_PERCENTAGE, PERCENTAGE, 10, 10, 80, 20);
     // the command line
     // uiAddElement(ui, ui->root, ABSOLUTE, );
 
@@ -47,16 +48,9 @@ int main(){
     // printf("UwU\n");
     // loadBlocks(BLOCKS);
     g = graphicsInit();
+
     struct Ui *ui = uiInit(g->window);
     defineUi(ui);
-
-    GLuint vao;
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-
-    GLuint vbo;
-    glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
     struct Shader *shader = shaderInit(VERTEX_SHADER, FRAGMENT_SHADER);
 
@@ -83,8 +77,10 @@ int main(){
     
     const size_t cubePositionsSize = sizeof(cubePositions) / sizeof(vec3);
 
-    shaderPrint(shader);
-    shaderPrint(ui->shader);
+    struct Text *text = textInit();
+    textColor(text, (vec3){1, 0, 0});
+
+    // shaderPrint(shader);
 
     // int prev = 0, curr;
     // int couter = 0;
@@ -103,6 +99,7 @@ int main(){
         //     couter++;
         // }
 
+        glEnable(GL_DEPTH_TEST);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         useShader(shader);
@@ -181,9 +178,15 @@ int main(){
         // glUniform3f(colorUniform, 0, 0, 1);
         
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+        textDraw(text, "UwU >_<", 0, 0, 0.2);
+        glDisable(GL_DEPTH_TEST);
+        // glDepthMask(GL_FALSE);
+        // glDepthFunc(GL_ALWAYS);
         uiDraw(ui);
         processInput();
         glfwSwapBuffers(g->window);
+
         glfwPollEvents();
     }
 
