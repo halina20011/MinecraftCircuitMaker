@@ -1,1 +1,7 @@
-#define BLOCKS = "redstone_torch\nredstone_dust\nredstone_block\npiston\nsticky_piston\nlever\nrail\nlever\n"
+enum BLOCKS{
+    REDSTONE_DUST,
+    REDSTONE_TORCH,
+    PISTON,
+    STICKY_PISTON,
+    TARGET,
+};

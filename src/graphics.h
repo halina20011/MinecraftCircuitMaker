@@ -23,8 +23,7 @@
 #include "./gHeader.h"
 
 #include "./shader.h"
-#include "./shadersDef.h"
-#include "colors.h"
+#include "./shaders.h"
 
 #include "func.h"
 
@@ -44,5 +43,8 @@ struct Graphics *graphicsInit();
 
 void drawLine(int x1, int y1, int z1, int x2, int y2, int z2);
 void drawArrow(vec3 end, float scale);
+
+void *readBitmap(const char fileName[]);
+GLuint loadTexture(uint8_t *data, int width, int height);
 
 #endif

@@ -2,6 +2,8 @@
 
 #define MAX(a, b) ((a < b) ? b : a)
 
+VECTOR_TYPE_FUNCTIONS(struct UiElement, UiElementVector, "")
+
 // first create and ui instance with uiInit();
 // then define the ui from the top
 //  the most top element is ui->root
@@ -19,10 +21,10 @@ struct Ui *uiInit(GLFWwindow *w){
 
     ui->idCounter = 0;
 
-    ui->uiElements = vectorInit();
+    ui->uiElements = UiElementVectorInit();
 
-    struct UiElement *root = uiElementInit(ui);
-    root->flags = ELEMENT_HIDDEN;
+    struct UiElement root = uiElementInit(ui);
+    root.flags = ELEMENT_HIDDEN;
 
     ui->root = root;
 
@@ -108,18 +110,18 @@ void printVertexData(float *data){
 // calculate
 void uiBake(struct Ui *ui){
     glfwGetFramebufferSize(ui->window, &ui->width, &ui->height);
-    struct UiElement *root = ui->root;
-    root->posType = ABSOLUTE_PX;
-    root->iX = 0;
-    root->iY = 0;
-    root->sizeType = PX;
-    root->iWidth = ui->width;
-    root->iHeight = ui->height;
+    struct UiElement root = ui->root;
+    root.posType = ABSOLUTE_PX;
+    root.iX = 0;
+    root.iY = 0;
+    root.sizeType = PX;
+    root.iWidth = ui->width;
+    root.iHeight = ui->height;
 
     ui->bakeSize = 0;
-    struct Vector *elements = ui->uiElements;
+    struct UiElementVector *elements = ui->uiElements;
     for(size_t i = 0; i < elements->size; i++){
-        uiElementCalc(ui, elements->data[i]);
+        uiElementCalc(ui, &elements->data[i]);
     }
 
     free(ui->data);
@@ -127,7 +129,7 @@ void uiBake(struct Ui *ui){
     ui->data = malloc(dataSize);
     size_t dataIndex = 0;
     for(size_t j = 0; j < elements->size; j++){
-        struct UiElement *e = ui->uiElements->data[j];
+        struct UiElement *e = &ui->uiElements->data[j];
         if(e->flags != ELEMENT_HIDDEN){
             float data[ELEMENT_DATE_SIZE];
             float color[4] = {N_COLOR(e->color.r), N_COLOR(e->color.g), N_COLOR(e->color.b), 1.0f};
@@ -184,16 +186,18 @@ void uiDraw(struct Ui *ui){
     }
 }
 
-struct UiElement *uiElementInit(struct Ui *ui){
-    struct UiElement *element = malloc(sizeof(struct UiElement));
+struct UiElement uiElementInit(struct Ui *ui){
+    // struct UiElement *element = malloc(sizeof(struct UiElement));
     
-    element->id = ui->idCounter++;
-    element->level = 0;
-    printf("new element %zu\n", element->id);
-    vectorPush(ui->uiElements, element);
-    element->parent = NULL;
-    element->childrenSize = 0;
-    element->color = (struct ElementColor){255, 255, 255};
+    struct UiElement element;
+    element.id = ui->idCounter++;
+    element.level = 0;
+    printf("new element %zu\n", element.id);
+    element.parent = NULL;
+    element.childrenSize = 0;
+    element.color = (struct ElementColor){255, 255, 255};
+    
+    UiElementVectorPush(ui->uiElements, element);
 
     return element;
 }

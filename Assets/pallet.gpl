@@ -1,0 +1,16 @@
+GIMP Palette
+Name: MinecraftCircuitMaker
+Columns: 11
+# A simple example
+0   0   0   Black
+255 255 255 White
+255 0   0   Red
+65  65  65  Rock1
+80  80  80  Rock2
+140 140 140 Rock3
+168 136 80  Wood
+40  75  31  Slime1
+73  120 60  Slime2
+130 182 120 Slime3
+80  0   0   Redstone
+255 0   0   RedstoneLit

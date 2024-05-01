@@ -21,7 +21,7 @@
 #include <cglm/vec4.h>
 
 #include "./shader.h"
-#include "./shadersDef.h"
+#include "./shaders.h"
 #include "./vector.h"
 
 // 6 float per vertex
@@ -54,22 +54,6 @@ struct ElementColor{
     uint8_t r, g, b;
 };
 
-struct Ui{
-    GLFWwindow *window;
-    int width, height;
-
-    struct Vector *uiElements;
-
-    struct UiElement *root;
-
-    size_t idCounter;
-    size_t visibleElements;
-
-    float *data;
-    size_t bakeSize;
-    struct Shader *shader;
-};
-
 struct UiElement{
     size_t id;
     size_t level;
@@ -93,11 +77,28 @@ struct UiElement{
     uint8_t flags;
 };
 
+struct Ui{
+    GLFWwindow *window;
+    int width, height;
+
+    struct UiElementVector *uiElements;
+
+    struct UiElement root;
+
+    size_t idCounter;
+    size_t visibleElements;
+
+    float *data;
+    size_t bakeSize;
+    struct Shader *shader;
+};
+NEW_VECTOR_TYPE(struct UiElement, UiElementVector)
+
 struct Ui *uiInit(GLFWwindow *w);
 
 void uiBake(struct Ui *ui);
 
-struct UiElement *uiElementInit(struct Ui *ui);
+struct UiElement uiElementInit(struct Ui *ui);
 struct UiElement *uiAddElement(struct UiElement *element, struct UiElement *parent, uint8_t posType, uint8_t sizeType, float x, float y, float width, float height);
 void uiDraw(struct Ui *ui);
 

@@ -13,7 +13,7 @@
 #include <cglm/vec3.h>
 
 #include "./shader.h"
-#include "./shadersDef.h"
+#include "./shaders.h"
 
 #define PRINTABLE_CHARACTERS 95
 
@@ -24,14 +24,21 @@
 #define BITMAP_COLOR 1
 #define BITMAP_SIZE (BITMAP_WIDTH * BITMAP_HEIGHT * BITMAP_COLOR)
 
+struct CharInfo{
+    GLuint texture;
+    uint8_t bearingLeft, bearingTop, width;
+};
+
 struct Text{
     struct Shader *shader;
     GLuint textureUniform, colorUniform;
-    GLuint asciiMap[127];
+    struct CharInfo asciiMap[127];
+    float *screenRatio;
 };
 
-struct Text *textInit();
-void textColor(struct Text *text, vec3 color);
+struct Text *textInit(float *screenRatio);
+
+void textColor(struct Text *text, struct Color color);
 void textDraw(struct Text *text, char *str, float x, float y, float size);
 
 #endif

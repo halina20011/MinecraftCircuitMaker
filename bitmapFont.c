@@ -48,7 +48,7 @@ int main(){
             fprintf(stderr, "cound not open char %c\n", c);
             return 1;
         }
-
+        
         FT_Bitmap *bmp = &g->bitmap;
         int bmpHeight = bmp->rows;
         int bmpWidth = bmp->width;
@@ -58,14 +58,28 @@ int main(){
         }
 
         // add y offset so every char will be on text line
-        int yOffset = TEXTURE_HEIGHT - bmpHeight;
         for(int y = 0; y < bmpHeight; y++){
             for(int x = 0; x < bmpWidth; x++){
                 uint8_t pixel = bmp->buffer[y * bmpWidth + x];
-                bitmap[wY + y + yOffset][wX + x] = pixel;
+                bitmap[wY + y][wX + x] = pixel;
             }
         }
+        
+        int lastRow = wY + TEXTURE_HEIGHT - 1;
+        int lastColumn = wX + TEXTURE_WIDTH - 1;
+        // printf("%i,%i\n", lastRow, lastColumn);
+        int8_t diffY = bmpHeight - g->bitmap_top;
+        uint8_t offsetY = 0;
+        if(offsetY < 0){
+            offsetY = -diffY;
+        }
 
+        // printf("%c %i %i %i\n", c, g->bitmap_left, g->bitmap_top, );
+        // bitmap[lastRow][lastColumn - 1] = g->bitmap_left;
+        // bitmap[lastRow][lastColumn] = g->bitmap_top;
+        bitmap[lastRow][lastColumn - 1] = bmpWidth;
+        bitmap[lastRow][lastColumn] = diffY;
+        // printf("%c [x, y] [%i, %i] [%i, %i]\n", c, bmpWidth, bmpWidth, g->bitmap_left, g->bitmap_top);
         // printf("%c %i %i\n", c, bmpWidth, bmpHeight);
         wY += TEXTURE_HEIGHT;
     }

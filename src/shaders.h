@@ -10,10 +10,13 @@
     "}\n"
 
 #define FRAGMENT_SHADER "#version 330 core\n"\
-    "uniform vec3 color;\n"\
-    "out vec4 outColor;\n"\
+    "in vec2 FragTextureCords2;\n"\
+    "uniform sampler2D textureSampler;\n"\
+    "\n"\
+    "out vec4 FragmentColor;\n"\
+    "\n"\
     "void main(){\n"\
-    "    outColor = vec4(color, 1.0);\n"\
+    "    FragmentColor = texture(textureSampler, FragTextureCords2);\n"\
     "}\n"
 
 #define FRAGMENT_UI_SHADER "#version 330 core\n"\
@@ -34,12 +37,17 @@
 
 #define VERTEX_SHADER "#version 330 core\n"\
     "in vec3 position;\n"\
+    "in vec2 texture;\n"\
+    "\n"\
     "uniform mat4 model;\n"\
     "uniform mat4 view;\n"\
     "uniform mat4 projection;\n"\
     "\n"\
+    "out vec2 FragTextureCords2;\n"\
+    "\n"\
     "void main(){\n"\
     "    gl_Position = projection * view * model * vec4(position, 1.0);\n"\
+    "    FragTextureCords2 = texture;\n"\
     "}\n"
 
 #define VERTEX_TEXT_SHADER "#version 330 core\n"\

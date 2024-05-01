@@ -15,6 +15,8 @@
 #include <cglm/mat4.h>
 #include <cglm/vec4.h>
 
+#include "vector.h"
+
 void processInput();
 
 // Callbacks
@@ -23,6 +25,6 @@ void cursorPosCallback(GLFWwindow *w, double x, double y);
 void scrollCallback(GLFWwindow *w, double x, double y);
 void framebufferSizeCallback(GLFWwindow *w, int width, int height);
 
-uint8_t *readFile(const char fileName[]);
+uint8_t *readFile(const char fileName[], size_t *rSize);
 
 #endif

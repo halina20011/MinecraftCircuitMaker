@@ -96,3 +96,31 @@ struct Graphics *graphicsInit(){
     return g;
     // glfwTerminate();
 }
+
+GLuint loadTexture(uint8_t *data, int width, int height){
+    GLuint textureName;
+    glGenTextures(1, &textureName);
+    printf("textureName: %i %i %i\n", textureName, width, height);
+    glBindTexture(GL_TEXTURE_2D, textureName);
+
+    // printf("char %c => texure name: %i avg %f\n", i, textureName, sum / (float)(w * h));
+    // text->asciiMap[i].bearingLeft = offsetLeft;
+    // printf("t => %c %i %i\n", i, i, textureName);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+                
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    // for(int i = 0; i < width * height * 4; i++){
+    //     data[i] = 255;
+    // }
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+
+    // glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, data);
+    
+    return textureName;
+}

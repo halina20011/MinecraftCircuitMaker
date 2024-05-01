@@ -1,5 +1,8 @@
 CC = gcc
 
+BLOCKS_DIR_NAME = "./Assets/Blocks/"
+BLOCKS_DIR_PATH = $(shell realpath -- $(BLOCKS_DIR_NAME))
+
 FILES = $(wildcard ./src/*.c)
 OBJECTS = $(patsubst ./src/%.c, ./build/%.o, $(FILES))
 LDFLAGS = -lc -lm $(shell pkg-config --libs cglm) \
@@ -8,20 +11,22 @@ LDFLAGS = -lc -lm $(shell pkg-config --libs cglm) \
 			$(shell pkg-config --libs assimp) \
 
 CPPFLAGS =
-CFLAGS = -Wall -Wextra -Wshadow
+CFLAGS = -Wall -Wextra -Wshadow -D'BLOCKS_DIR_PATH="$(BLOCKS_DIR_PATH)"'
 
 .PHONY: update urun
 
-db: 
+info:
+	@echo "files: "
 	@echo $(FILES)
 	@echo $(OBJECTS)
 	@echo $(LDFLAGS)
+	@echo "data path: $(BLOCKS_DIR_PATH)"
 
 # build/main.o: src/shaders.h
 # 	@echo "shader was updated"
 
 build/%.o: src/%.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<;
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
 
 main: $(OBJECTS)
 	$(CC) $^ $(CFLAGS) $(LDFLAGS) -o ./build/$@
@@ -31,11 +36,11 @@ flags =
 run: main
 	./build/main $(flags)
 
-blocks: includeFile.c
-	gcc includeFile.c -o ./build/includeFile && ./build/includeFile | tee src/blocks.h
+# blocks: includeFile.c
+# 	gcc includeFile.c -o ./build/includeFile && ./build/includeFile | tee src/blocks.h
 
 shaders: makeShaders.c
-	gcc makeShaders.c -o ./build/makeShaders && ./build/makeShaders | tee src/shadersDef.h
+	gcc makeShaders.c -o ./build/makeShaders && ./build/makeShaders | tee src/shaders.h
 
 bitmap: bitmapFont.c
 	gcc $(shell pkg-config --cflags --libs freetype2) bitmapFont.c -o ./build/bitmapFont && ./build/bitmapFont

@@ -1,0 +1,47 @@
+{
+    "redstoneDust":{
+        "modelName": "redstoneDust",
+        "id": "redstone_wire",
+        "states": [],
+        "index": 0
+
+    },
+    "redstoneTorch": {
+        "modelName": "redstoneTorch",
+        "id": "redstone_torch",
+        "index": 1
+    },
+    "piston":{
+        "modelName": "pistonDef",
+        "isCollection": false,
+        "id": "piston",
+        "index": 2,
+        "states": [{
+                "name": "PistonOpen",
+                "flag": "EXTENDED_TRUE"
+            }
+        ]
+    },
+    "stickyPiston":{
+        "modelName": "stickyPistonDef",
+        "id": "sticky_piston",
+        "index": 3,
+        "states": [{
+                "name": "StickyPistonOpen",
+                "flag": "EXTENDED_TRUE"
+            }
+        ]
+    },
+    "target":{
+        "modelName": "target",
+        "isCollection": false,
+        "id": "target",
+        "index": 4
+    },
+    "redstoneLamp":{
+        "modelName": "redstoneLamp",
+        "isCollection": false,
+        "id": "target",
+        "index": 5
+    }
+}

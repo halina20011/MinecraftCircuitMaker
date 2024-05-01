@@ -4,9 +4,43 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <dirent.h>
+#include <string.h>
+
+#include "graphics.h"
+#include "func.h"
+
+enum BLOCK_STATES{
+    // facing
+    EAST,
+    NORTH,
+    SOUTH,
+    WEST,
+    UP,
+    DOWN,
+
+    // extended
+    EXTENDED_FALSE,
+    EXTENDED_TRUE,
+
+    POWERED,
+    UNPOWERED,
+};
+
+struct State{
+    char *name;
+};
+
+struct BlockType{
+    uint8_t type;
+    float *data;
+    size_t dataSize;
+};
+
+NEW_VECTOR_TYPE(struct BlockType, BlockTypeVector)
 
 struct Block{
-    uint16_t type;
+    char id;
     uint8_t rotation;
 };
 
@@ -33,8 +67,13 @@ struct ResBuilding{
     struct Block *blocks;
 };
 
-void loadBlocks(const char blockString[], size_t size);
+GLuint loadAllBlocks(const char textureFile[]);
+struct BlockType *loadBlocks(size_t *size);
 
 void buildingExport(struct Building building);
+
+void drawBlock(struct BlockType block);
+
+struct BlockType readBlock(const char fileName[]);
 
 #endif

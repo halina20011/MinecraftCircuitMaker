@@ -1,5 +1,6 @@
 #include "graphics.h"
 
+
 extern struct Graphics *g;
 
 extern bool command;
@@ -59,14 +60,26 @@ void keyCallback(GLFWwindow *w, int key, int scancode, int action, int mods){
         return;
     }
 
+
     if(key == '/' && !command){
         command = true;
-        commandBufferSize = 0;
+        APPEND_STRING(commandBuffer, commandBufferSize, MAX_COMMAND_BUFFER_SIZE, '/');
     }
     else if(command && isprint(key)){
-        printf("%c", key);
-        fflush(stdout);
-        APPEND_STRING(commandBuffer, commandBufferSize, MAX_COMMAND_BUFFER_SIZE, key);
+        char c = key;
+        if(isalpha(key)){
+            c = tolower(key);
+            if(glfwGetKey(w, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS){
+                c = toupper(c);
+            }
+        }
+        APPEND_STRING(commandBuffer, commandBufferSize, MAX_COMMAND_BUFFER_SIZE, c);
+    }
+    else if(key == GLFW_KEY_BACKSPACE && commandBufferSize){
+        commandBuffer[--commandBufferSize] = 0;
+        if(!commandBufferSize){
+            command = false;
+        }
     }
     else if(key == GLFW_KEY_ENTER){
         APPEND_STRING(commandBuffer, commandBufferSize, MAX_COMMAND_BUFFER_SIZE, '\0');
@@ -138,4 +151,24 @@ void framebufferSizeCallback(GLFWwindow *w, int width, int height){
     g->height = height;
     g->screenRatio = (float)width / (float)height;
     glViewport(0, 0, width, height);
+}
+
+uint8_t *readFile(const char fileName[], size_t *rSize){
+    FILE *file = fopen(fileName, "rb");
+    if(!file){
+        fprintf(stderr, "unable to open file: %s\n", fileName);
+        exit(1);
+    }
+
+    fseek(file, 0, SEEK_END);
+    size_t size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+ 
+    void *data = malloc(size);
+    fread(data, 1, size, file);
+    fclose(file);
+
+    *rSize = size;
+
+    return data;
 }
