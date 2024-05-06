@@ -27,6 +27,11 @@ enum BLOCK_STATES{
     UNPOWERED,
 };
 
+struct BoundingBox{
+    float minX, minY, minZ;
+    float maxX, maxY, maxZ;
+};
+
 struct State{
     char *name;
 };
@@ -35,6 +40,7 @@ struct BlockType{
     uint8_t type;
     float *data;
     size_t dataSize;
+    struct BoundingBox boundingBox;
 };
 
 NEW_VECTOR_TYPE(struct BlockType, BlockTypeVector)
@@ -73,7 +79,5 @@ struct BlockType *loadBlocks(size_t *size);
 void buildingExport(struct Building building);
 
 void drawBlock(struct BlockType block);
-
-struct BlockType readBlock(const char fileName[]);
 
 #endif

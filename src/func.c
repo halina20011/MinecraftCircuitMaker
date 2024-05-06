@@ -1,18 +1,13 @@
 #include "graphics.h"
 
-
 extern struct Graphics *g;
 
 extern bool command;
 extern char commandBuffer[MAX_COMMAND_BUFFER_SIZE];
 extern size_t commandBufferSize;
 
-extern vec3 cameraPos;
-
-extern vec3 cameraFront;
-extern vec3 cameraUp;
-
-extern float yaw, pitch, fov;
+extern bool mouseClick;
+extern double xPos, yPos;
 
 void processInput(){
     if(command){
@@ -23,33 +18,38 @@ void processInput(){
     if(glfwGetKey(g->window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS){
         cameraSpeed *= 2.0;
     }
+    
+    if(glfwGetKey(g->window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS){
+        cameraSpeed *= 0.05;
+    }
+
     vec3 offset;
-    glm_vec3_scale(cameraFront, cameraSpeed, offset);
+    glm_vec3_scale(g->camera->cameraFront, cameraSpeed, offset);
 
     if(glfwGetKey(g->window, GLFW_KEY_W) == GLFW_PRESS){
-        glm_vec3_add(cameraPos, offset, cameraPos);
+        glm_vec3_add(g->camera->cameraPos, offset, g->camera->cameraPos);
     }
     if(glfwGetKey(g->window, GLFW_KEY_S) == GLFW_PRESS){
-        glm_vec3_sub(cameraPos, offset, cameraPos);
+        glm_vec3_sub(g->camera->cameraPos, offset, g->camera->cameraPos);
     }
 
-    glm_vec3_scale(cameraUp, cameraSpeed, offset);
+    glm_vec3_scale(g->camera->cameraUp, cameraSpeed, offset);
 
     if(glfwGetKey(g->window, GLFW_KEY_Q) == GLFW_PRESS){
-        glm_vec3_add(cameraPos, offset, cameraPos);
+        glm_vec3_add(g->camera->cameraPos, offset, g->camera->cameraPos);
     }
     if(glfwGetKey(g->window, GLFW_KEY_E) == GLFW_PRESS){
-        glm_vec3_sub(cameraPos, offset, cameraPos);
+        glm_vec3_sub(g->camera->cameraPos, offset, g->camera->cameraPos);
     }
 
-    glm_vec3_cross(cameraFront, cameraUp, offset);
+    glm_vec3_cross(g->camera->cameraFront, g->camera->cameraUp, offset);
     glm_vec3_normalize(offset);
     glm_vec3_scale(offset, cameraSpeed, offset);
     if(glfwGetKey(g->window, GLFW_KEY_A) == GLFW_PRESS){
-        glm_vec3_sub(cameraPos, offset, cameraPos);
+        glm_vec3_sub(g->camera->cameraPos, offset, g->camera->cameraPos);
     }
     if(glfwGetKey(g->window, GLFW_KEY_D) == GLFW_PRESS){
-        glm_vec3_add(cameraPos, offset, cameraPos);
+        glm_vec3_add(g->camera->cameraPos, offset, g->camera->cameraPos);
     }
 }
 
@@ -60,6 +60,10 @@ void keyCallback(GLFWwindow *w, int key, int scancode, int action, int mods){
         return;
     }
 
+    if(key == GLFW_KEY_TAB){
+        g->camIndex = (g->camIndex + 1) % g->camSize;
+        g->camera = g->cams[g->camIndex];
+    }
 
     if(key == '/' && !command){
         command = true;
@@ -91,57 +95,57 @@ void keyCallback(GLFWwindow *w, int key, int scancode, int action, int mods){
     }
 }
 
-float prevX = -1, prevY = 0;
 void cursorPosCallback(GLFWwindow *w, double x, double y){
     UNUSED(x);
     UNUSED(y);
     if(!glfwGetMouseButton(w, GLFW_MOUSE_BUTTON_LEFT)){
-        prevX = -1;
+        g->camera->prevX = -1;
         return;
     }
-    if(prevX == -1){
-        prevX = x;
-        prevY = y;
+    if(g->camera->prevX == -1){
+        g->camera->prevX = x;
+        g->camera->prevY = y;
     }
 
-    float xOffset = x - prevX;
-    float yOffset = prevY - y;
+    float xOffset = x - g->camera->prevX;
+    float yOffset = g->camera->prevY - y;
 
-    prevX = x;
-    prevY = y;
+    g->camera->prevX = x;
+    g->camera->prevY = y;
+
     float sensitivity = 0.5f;
     xOffset *= sensitivity;
     yOffset *= sensitivity;
 
-    yaw += xOffset;
-    pitch += yOffset;
+    g->camera->yaw += xOffset;
+    g->camera->pitch += yOffset;
 
-    if(89 < pitch){
-        pitch = 89;
+    if(89 < g->camera->pitch){
+        g->camera->pitch = 89;
     }
-    if(pitch < -89){
-        pitch = -89.0f;
+    if(g->camera->pitch < -89){
+        g->camera->pitch = -89.0f;
     }
 
-    float yawRad = glm_rad(yaw);
-    float pitchRad = glm_rad(pitch);
+    float yawRad = glm_rad(g->camera->yaw);
+    float pitchRad = glm_rad(g->camera->pitch);
 
-    cameraFront[0] = cos(yawRad) * cos(pitchRad);
-    cameraFront[1] = sin(pitchRad);
-    cameraFront[2] = sin(yawRad) * cos(pitchRad);
+    g->camera->cameraFront[0] = cos(yawRad) * cos(pitchRad);
+    g->camera->cameraFront[1] = sin(pitchRad);
+    g->camera->cameraFront[2] = sin(yawRad) * cos(pitchRad);
 
-    glm_vec3_normalize(cameraFront);
+    glm_vec3_normalize(g->camera->cameraFront);
 }
 
 void scrollCallback(GLFWwindow *w, double x, double y){
     UNUSED(w);
     UNUSED(x);
-    fov -= (float)y;
-    if(fov < 1.0){
-        fov = 1;
+    g->camera->fov -= (float)y;
+    if(g->camera->fov < 1.0){
+        g->camera->fov = 1;
     }
-    else if(90 < fov){
-        fov = 90;
+    else if(90 < g->camera->fov){
+        g->camera->fov = 90;
     }
 }
 
@@ -151,6 +155,13 @@ void framebufferSizeCallback(GLFWwindow *w, int width, int height){
     g->height = height;
     g->screenRatio = (float)width / (float)height;
     glViewport(0, 0, width, height);
+}
+
+void mouseButtonCallback(GLFWwindow *w, int button, int action, int mods){
+    if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS){
+        mouseClick = true;
+        glfwGetCursorPos(g->window, &xPos, &yPos);
+    }
 }
 
 uint8_t *readFile(const char fileName[], size_t *rSize){

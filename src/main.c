@@ -16,17 +16,13 @@ bool command = false;
 char commandBuffer[MAX_COMMAND_BUFFER_SIZE];
 size_t commandBufferSize = 0;
 
-vec3 up = {0, 1, 0};
-vec3 cameraPos = {0, 0, 3};
-
-vec3 cameraFront = {0, 0, -1};
-vec3 cameraUp = {0, 1, 0};
-
-float yaw = -90, pitch = 0;
-float fov = 45;
+bool mouseClick = false;
+double xPos, yPos;
 
 float cube[];
 size_t cubeSize;
+
+vec3 clickVec = {0, 0, -1};
 
 void defineUi(struct Ui *ui){
     struct UiElement blockHolder = uiElementInit(ui);
@@ -45,7 +41,15 @@ int main(){
     // printf("%i %i\n", DEBUG, CGLM_DEFINE_PRINTS);
     // printf("UwU\n");
     // loadBlocks(BLOCKS);
+    struct Camera cam1 = {};
+    struct Camera cam2 = {};
+    struct Camera *cams[2] = {&cam1, &cam2};
+    
+    cameraInit(&cam1);
+    cameraInit(&cam2);
+
     g = graphicsInit();
+    graphicsAddCameras(g, cams, 2);
 
     struct Ui *ui = uiInit(g->window);
     // defineUi(ui);
@@ -64,30 +68,18 @@ int main(){
     GLint projectionUniformLocation = getUniformLocation(shader, "projection");
 
     GLint textureUniform = getUniformLocation(shader, "textureSampler");
+    GLint colorUniform = getUniformLocation(shader, "color");
     printf("texture uniform %i\n", textureUniform);
     
-    GLuint colorUniform = -1;
-    // GLuint colorUniform = getUniformLocation(shader, "color");
-    glUniform3f(colorUniform, 0.5, 0.5, 0.5);
-    
-    // vec3 cubePositions[] = {
-    //     {0, 0, 0},
-    //     {2, 5, -10},
-    //     {1, 2, 3},
-    //     {-1, -4, -2},
-    //     {-1, 2, 4},
-    //     {3, 3, 3},
-    //     {-2, -3, 3},
-    // };
     vec3 cubePositions[] = {
-        {-4, 0, 0},
-        {-2, 0, 0},
-        {0, 0, 0},
-        {2, 0, 0},
-        {4, 0, 0},
-        {6, 0, 0},
-        {8, 0, 0},
-        {10, 0, 0},
+        {-4, 0, -1},
+        {-2, 0, -2},
+        {0, 0, -2},
+        {2, 0, -2},
+        {4, 0, -2},
+        {6, 0, -2},
+        {8, 0, -2},
+        {10, 0, -2},
     };
     
     const size_t cubePositionsSize = sizeof(cubePositions) / sizeof(vec3);
@@ -118,7 +110,6 @@ int main(){
     // int couter = 0;
     //
     // struct BlockType target = readBlock("Assets/Blocks/target");
-    struct BlockType piston = readBlock("Assets/Blocks/pistonDef");
 
     while(!glfwWindowShouldClose(g->window)){
         float currFrame = glfwGetTime();
@@ -142,71 +133,195 @@ int main(){
 
         mat4 view, projection, model;
         glm_mat4_identity(view);
-        // glm_mat4_identity(projection);
+        glm_mat4_identity(projection);
         glm_mat4_identity(model);
 
         glUniformMatrix4fv(projectionUniformLocation, 1, GL_FALSE, (float*)projection);
         glUniformMatrix4fv(viewUniformLocation, 1, GL_FALSE, (float*)view);
+
+        vec3 look, cameraRight, currCameraUp;
+        glm_vec3_copy(g->camera->cameraFront, look);
+        glm_vec3_normalize(look);
+        glm_vec3_cross(look, g->camera->up, cameraRight);
+        glm_vec3_cross(cameraRight, look, currCameraUp);
+        
         glm_translate(model, (vec3){0.8, 0.8, 0});
         glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)model);
 
-        // drawArrow(up, 2);
-        // SET_COLOR(colorUniform, GREEN);
-        // drawArrow(right, 2);
-        // SET_COLOR(colorUniform, BLUE);
-        // drawArrow(front, 2);
-        vec3 look, cameraRight, currCameraUp;
-        glm_vec3_copy(cameraFront, look);
-        glm_vec3_normalize(look);
-        glm_vec3_cross(look, up, cameraRight);
-        glm_vec3_cross(cameraRight, look, currCameraUp);
-
         // glm_vec3_cross(cameraRight, cameraPos, rightR);
-        
-        // SET_COLOR(colorUniform, LIGHT_PURPLE);
-        // drawArrow(cameraFront, -0.1);
-        // SET_COLOR(colorUniform, RED);
-        // drawArrow(cameraRight, 0.1);
-        // SET_COLOR(colorUniform, BLUE);
-        // drawArrow(currCameraUp, 0.1);
+
+        SET_COLOR(colorUniform, LIGHT_PURPLE);
+        drawArrow(g->camera->cameraFront, 0.1);
+        SET_COLOR(colorUniform, RED);
+        drawArrow(cameraRight, 0.1);
+        SET_COLOR(colorUniform, BLUE);
+        drawArrow(currCameraUp, 0.1);
+        glm_translate(model, (vec3){-0.8, -0.8, 0});
+        glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)model);
         
         // glm_ortho(0, 800.0f, 0, 600.0f, -10.0f, 200.0f, projection);
-        glm_perspective(glm_rad(fov), g->screenRatio, 0.1f, 100.0f, projection);
-        // printf("fov: %f\n", glm_rad(fov));
+        glm_perspective(glm_rad(g->camera->fov), g->screenRatio, 0.1f, 100.0f, projection);
         // glm_mat4_print(projection, stderr);
-        // return 0;
+        
+        vec3 pointZero = {0, 0, 0};
+        vec3 cameraDirection = {};
+        glm_vec3_sub(g->camera->cameraPos, pointZero, cameraDirection);
 
         vec3 center;
-        glm_vec3_add(cameraPos, cameraFront, center);
-        glm_lookat(cameraPos, center, cameraUp, view);
-
-        // glm_vec3_print(cameraFront, stdout);
+        glm_vec3_add(g->camera->cameraPos, g->camera->cameraFront, center);
+        glm_lookat(g->camera->cameraPos, center, g->camera->cameraUp, view);
         
         glUniformMatrix4fv(viewUniformLocation, 1, GL_FALSE, (float*)view);
         glUniformMatrix4fv(projectionUniformLocation, 1, GL_FALSE, (float*)projection);
+        
+        // draw origin
+        drawPoint(pointZero, colorUniform);
+        
+        // glBufferData(GL_ARRAY_BUFFER, sizeof(line), line, GL_DYNAMIC_DRAW);
+        // glDrawArrays(GL_LINES, 0, 2);
+        
+        // glm_vec3_print(pos, stdout);
+        // glm_vec3_print(cameraDirection, stdout);
+    
+        float yawRad = glm_rad(cam1.yaw);
+        float pitchRad = glm_rad(cam1.pitch);
+        float xOffset = cos(yawRad) * cos(pitchRad);
+        float yOffset = sin(pitchRad);
+        float zOffset = sin(yawRad) * cos(pitchRad);
 
+        vec3 offset = {xOffset, yOffset, zOffset};
+        
+        vec3 cam1Center;
+        glm_vec3_add(cam1.cameraPos, cam1.cameraFront, cam1Center);
+        vec3 cOffset = {};
+
+        // glm_vec3_negate(nCameraFront);
+        glm_vec3_scale(offset, -2, offset);
+        glm_vec3_add(cam1Center, offset, cOffset);
+        drawLineVec(cam1Center, cOffset);
+        drawPoint(cam1Center, colorUniform);
+
+        // drawPoint(center, colorUniform);
+        // drawPoint(cOffset, colorUniform);
+        // glm_vec3_negate(cOffset);
+        drawLineDirection(cam1Center, cOffset);
+        // drawPoint(center, colorUniform);
+        
+        // float angle = glm_rad(20 * i);
+        // glm_rotate(model, angle, (vec3){1, 0.3, 0.5});
+        // glm_rotate_x();
+        
+        mat4 cameraMatrix;
+        glm_mat4_identity(cameraMatrix);
+        glm_lookat(cam1.cameraPos, cam1Center, cam1.cameraUp, cameraMatrix);
+        glm_mat4_inv(cameraMatrix, cameraMatrix);
+        glm_translate(cameraMatrix, (vec3){0, 0, 1});
+        glm_scale(cameraMatrix, (vec3){0.1, 0.1, 0.1});
+
+        if(mouseClick){
+            mouseClick = false;
+            printf("%f %f\n", xPos, yPos);
+            float x = (2.0f * xPos) / (float)g->width - 1.0f;
+            float y = 1.0f - (2.0f * yPos) / (float)g->height;
+            float z = 1.0f;
+
+            vec3 rayEnd = {x, y, z};
+
+            vec4 rayClip = {rayEnd[0], rayEnd[1], -1.0, 1.0};
+
+            vec4 rayEye = {};
+            mat4 projInv = {};
+            glm_mat4_inv(projection, projInv);
+            glm_mat4_mulv(projInv, rayClip, rayEye);
+
+            rayEye[0] = rayEye[0];
+            rayEye[1] = rayEye[1];
+            rayEye[2] = -1;
+            rayEye[3] = 0.0;
+
+            mat4 viewInv = {};
+            vec4 rayWorld4 = {};
+            glm_mat4_inv(view, viewInv);
+            glm_mat4_mulv(viewInv, rayEye, rayWorld4);
+            vec3 rayWorld = {rayWorld4[0], rayWorld4[1], rayWorld4[2]};
+
+            glm_vec3_normalize(rayWorld);
+            glm_vec3_print(rayWorld, stdout);
+            glm_vec3_add(g->camera->cameraPos, rayWorld, clickVec);
+        }
+
+        drawPoint(clickVec, colorUniform);
+        drawLineVec(g->camera->cameraPos, clickVec);
+
+        // glm_translate(cameraMatrix, cOffset);
+
+        // glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)cameraMatrix);
+        //
+        // SET_COLOR(colorUniform, WHITE);
+        // float near[] = {
+        //     -1, -1, 0, 0, 0,
+        //     1, -1, 0, 0, 0,
+        //     1, 1, 0, 0, 0,
+        //     -1, 1, 0, 0, 0,
+        // };
+        // glBufferData(GL_ARRAY_BUFFER, sizeof(near), near, GL_DYNAMIC_DRAW);
+        // glDrawArrays(GL_LINE_LOOP, 0, 4);
+        //
+        // glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)model);
+
+        // SET_COLOR(colorUniform, LIGHT_PURPLE);
+        // drawLineVec(center, cameraFront);
+        // SET_COLOR(colorUniform, BLUE);
+        // drawLineVec(pointZero, center);
+        // drawPoint(lookDir, colorUniform);
+        // drawPoint(center, colorUniform);
+        // drawPoint(cameraDirection, colorUniform);
+        // drawPoint(cameraPos, colorUniform);
+        
+        SET_COLOR(colorUniform, RED);
+        drawLineVec(center, pointZero);
+        // glm_vec3_print(g->camera->cameraPos, stdout);
+
+        // drawPoint(cameraPos, colorUniform);
+        // glm_vec3_print(cameraDirection, stdout);
+        // glm_vec3_print(pos, stdout);
+        // float line2[] = {
+        //     x0, y0, z0, 0, 0,
+        //     a, b, c, 0, 0
+        //     // x, y, z, 0, 0,
+        //     // cameraDirection[0], cameraDirection[1], cameraDirection[2], 0, 0,
+        // };
+        // glBufferData(GL_ARRAY_BUFFER, sizeof(line2), line2, GL_DYNAMIC_DRAW);
+        // glDrawArrays(GL_LINES, 0, 2);
+
+        SET_COLOR(colorUniform, RED);
         float trig[] = {
-            0, 0, 0, 0, 0,
-            1, 0, 0, 1, 0,
-            0.5, 1, 0, 0.5, 1
+            -10, -1, 10, 0, 0,
+            10, -1, 10, 0, 0,
+            10, -1, -10, 0, 0
         };
         glBufferData(GL_ARRAY_BUFFER, sizeof(trig), trig, GL_STATIC_DRAW);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        // glDrawArrays(GL_TRIANGLES, 0, 3);
 
         // struct BlockType block = blocksTypes[1];
 
-        // struct BlockType block = piston;
-        // glm_mat4_identity(model);
-        // glm_translate(model, cubePositions[1]);
-        // glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)model);
-        // drawBlock(block);
 
-        // printf("================================================\n");
-        // return 1;
+        // SET_COLOR(colorUniform, RED);
+        // float camera[] = {
+        //     -10, -1, 10, 0, 0,
+        //     10, -1, 10, 0, 0,
+        //     10, -1, -10, 0, 0
+        // };
+        // glBufferData(GL_ARRAY_BUFFER, sizeof(trig), trig, GL_STATIC_DRAW);
+        // glDrawArrays(GL_TRIANGLES, 0, 3);
+
+        glUniform4f(colorUniform, 0.5, 0.5, 0.5, 0);
         for(size_t i = 0; i < blocksTypesSize; i++){
             struct BlockType block = blocksTypes[i];
-            printf("%i\n", block.type);
+            // printf("%i\n", block.type);
             glm_mat4_identity(model);
+            // vec3 pos = {x, y, z};
+            // glm_translate(model, pos);
             glm_translate(model, cubePositions[i]);
             glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)model);
             drawBlock(block);
@@ -240,9 +355,9 @@ int main(){
         // x axis
         // glUniform3f(colorUniform, 1, 0, 0);
         // drawArrow(1, 0);
-        // // y axis
+        // y axis
         // glUniform3f(colorUniform, 0, 1, 0);
-        // // z axis
+        // z axis
         // glUniform3f(colorUniform, 0, 0, 1);
         
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);

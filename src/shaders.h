@@ -12,11 +12,13 @@
 #define FRAGMENT_SHADER "#version 330 core\n"\
     "in vec2 FragTextureCords2;\n"\
     "uniform sampler2D textureSampler;\n"\
+    "uniform vec4 color;\n"\
     "\n"\
     "out vec4 FragmentColor;\n"\
     "\n"\
     "void main(){\n"\
-    "    FragmentColor = texture(textureSampler, FragTextureCords2);\n"\
+    "    // comment\n"\
+    "    FragmentColor = texture(textureSampler, FragTextureCords2) * vec4(1 - color.a) + color * color.a;\n"\
     "}\n"
 
 #define FRAGMENT_UI_SHADER "#version 330 core\n"\

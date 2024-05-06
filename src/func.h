@@ -24,6 +24,7 @@ void keyCallback(GLFWwindow *w, int key, int scancode, int action, int mods);
 void cursorPosCallback(GLFWwindow *w, double x, double y);
 void scrollCallback(GLFWwindow *w, double x, double y);
 void framebufferSizeCallback(GLFWwindow *w, int width, int height);
+void mouseButtonCallback(GLFWwindow *w, int button, int action, int mods);
 
 uint8_t *readFile(const char fileName[], size_t *rSize);
 

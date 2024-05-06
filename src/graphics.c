@@ -6,10 +6,19 @@ void GLAPIENTRY messageCallback(IGNORE GLenum source, IGNORE GLenum type, IGNORE
     fprintf(stderr, "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n", messageString, type, severity, message );
 }
 
-void drawLine(int x1, int y1, int z1, int x2, int y2, int z2){
+void drawLine(float x1, float y1, float z1, float x2, float y2, float z2){
     float line[] = {
-        x1, y1, z1, 
-        x2, y2, z2, 
+        x1, y1, z1, 0, 0,
+        x2, y2, z2, 0, 0
+    };
+    glBufferData(GL_ARRAY_BUFFER, sizeof(line), line, GL_DYNAMIC_DRAW);
+    glDrawArrays(GL_LINES, 0, 2);
+}
+
+void drawLineVec(vec3 start, vec3 end){
+    float line[] = {
+        start[0], start[1], start[2], 0, 0,
+        end[0], end[1], end[2], 0, 0
     };
     glBufferData(GL_ARRAY_BUFFER, sizeof(line), line, GL_DYNAMIC_DRAW);
     glDrawArrays(GL_LINES, 0, 2);
@@ -23,12 +32,34 @@ void drawArrow(vec3 end, float scale){
     // float distance = sin(glm_rad(angle)) * 0.1;
     // UNUSED(distance);
     float line[] = {
-        0, 0, 0, 
-        arrow[0], arrow[1], arrow[2]
+        0, 0, 0, 0, 0,
+        arrow[0], arrow[1], arrow[2], 0, 0
     };
 
     glBufferData(GL_ARRAY_BUFFER, sizeof(line), line, GL_DYNAMIC_DRAW);
     glDrawArrays(GL_LINES, 0, 2);
+}
+
+void drawPoint(vec3 pos, GLint colorUniform){
+    float cx = pos[0];
+    float cy = pos[1];
+    float cz = pos[2];
+    const float s = 0.2;
+    
+    SET_COLOR(colorUniform, RED);
+    drawLine(cx - s , cy, cz, cx + s, cy, cz);
+    SET_COLOR(colorUniform, BLUE);
+    drawLine(cx, cy - s , cz, cx, cy + s, cz);
+    SET_COLOR(colorUniform, GREEN);
+    drawLine(cx, cy, cz - s, cx, cy, cz + s);
+}
+
+void drawLineDirection(vec3 pos, vec3 relDirection){
+    // glm_vec3_normalize(relDirection);
+    // glm_vec3_scale(relDirection, 1000, relDirection);
+    // glm_vec3_add(pos, relDirection, relDirection);
+
+    drawLine(pos[0], pos[1], pos[2], relDirection[0], relDirection[1], relDirection[2]);
 }
 
 struct Graphics *graphicsInit(){
@@ -63,6 +94,7 @@ struct Graphics *graphicsInit(){
     glfwSetKeyCallback(window, keyCallback);
     glfwSetCursorPosCallback(window, cursorPosCallback);
     glfwSetScrollCallback(window, scrollCallback);
+    glfwSetMouseButtonCallback(window, mouseButtonCallback);
 
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
     glfwGetFramebufferSize(window, &g->width, &g->height);
@@ -93,8 +125,16 @@ struct Graphics *graphicsInit(){
     // glDeleteProgram(program);
     
     g->window = window;
+
     return g;
     // glfwTerminate();
+}
+
+void graphicsAddCameras(struct Graphics *g, struct Camera **cams, size_t size){
+    g->camIndex = 0;
+    g->cams = cams;
+    g->camSize = size;
+    g->camera = g->cams[0];
 }
 
 GLuint loadTexture(uint8_t *data, int width, int height){

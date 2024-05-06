@@ -25,6 +25,8 @@
 #include "./shader.h"
 #include "./shaders.h"
 
+#include "color.h"
+#include "camera.h"
 #include "func.h"
 
 #define WINDOW_WIDTH 1362
@@ -37,12 +39,21 @@ struct Graphics{
     int width, height;
     float screenRatio;
     float deltaTime, lastFrame;
+    struct Camera **cams;
+    size_t camIndex;
+    size_t camSize;
+    struct Camera *camera;
 };
 
 struct Graphics *graphicsInit();
+void graphicsAddCameras(struct Graphics *g, struct Camera **cams, size_t size);
 
-void drawLine(int x1, int y1, int z1, int x2, int y2, int z2);
+void drawLine(float x1, float y1, float z1, float x2, float y2, float z2);
+void drawLineVec(vec3 start, vec3 end);
+void drawLineDirection(vec3 pos, vec3 relDirection);
 void drawArrow(vec3 end, float scale);
+
+void drawPoint(vec3 pos, GLint colorUniform);
 
 void *readBitmap(const char fileName[]);
 GLuint loadTexture(uint8_t *data, int width, int height);
