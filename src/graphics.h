@@ -51,6 +51,7 @@ void graphicsAddCameras(struct Graphics *g, struct Camera **cams, size_t size);
 void drawLine(float x1, float y1, float z1, float x2, float y2, float z2);
 void drawLineVec(vec3 start, vec3 end);
 void drawLineDirection(vec3 pos, vec3 relDirection);
+void drawDirection(vec3 start, vec3 end, float size);
 void drawArrow(vec3 end, float scale);
 
 void drawPoint(vec3 pos, GLint colorUniform);

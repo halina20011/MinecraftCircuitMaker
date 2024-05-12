@@ -24,6 +24,9 @@ size_t cubeSize;
 
 vec3 clickVec = {0, 0, -1};
 
+vec3 rayWorld;
+vec3 floorPos = {};
+
 void defineUi(struct Ui *ui){
     struct UiElement blockHolder = uiElementInit(ui);
     uiAddElement(&blockHolder, &ui->root, ABSOLUTE_PERCENTAGE, PERCENTAGE, 10, 20, 20, 90);
@@ -35,6 +38,47 @@ void defineUi(struct Ui *ui){
     // uiAddElement(ui, ui->root, ABSOLUTE, );
 
     uiBake(ui);
+}
+
+void intersectionDown(vec3 point, vec3 direction, vec3 *rPos){
+    // plane = Ax + By + Cz + D = 0
+    // line =>
+    //  ___
+    //  | x = x0 + at
+    //  | y = y0 + bt
+    //  | z = z0 + ct
+    //  __
+
+    // plane => 0*x + 1*y + 0*z = 0
+    // line =>  y = y0 + bt
+    //
+    //  y0 + bt = 0
+    //  bt = -y0
+    //  t = -y0 / b
+
+    float x0 = point[0];
+    float y0 = point[1];
+    float z0 = point[2];
+
+    float a = direction[0] - x0;
+    float b = direction[1] - y0;
+    float c = direction[2] - z0;
+
+    float t = (-0.5 - y0) / b;
+
+    float x = x0 + a * t;
+    float y = y0 + b * t;
+    float z = z0 + c * t;
+
+    // WRONG => *rPos[n] = 1;
+    (*rPos)[0] = x;
+    (*rPos)[1] = y;
+    (*rPos)[2] = z;
+    // *rPos[1] = y;
+    // *rPos[2] = z;
+
+    // printf("(%f %f %f) (%f %f %f) %f (%f %f %f)\n", x0, y0, z0, a, b, c, tx, x, y, z);
+    // glm_vec3_print(*rPos, stdout);
 }
 
 int main(){
@@ -175,7 +219,7 @@ int main(){
         glUniformMatrix4fv(projectionUniformLocation, 1, GL_FALSE, (float*)projection);
         
         // draw origin
-        drawPoint(pointZero, colorUniform);
+        // drawPoint(pointZero, colorUniform);
         
         // glBufferData(GL_ARRAY_BUFFER, sizeof(line), line, GL_DYNAMIC_DRAW);
         // glDrawArrays(GL_LINES, 0, 2);
@@ -198,27 +242,21 @@ int main(){
         // glm_vec3_negate(nCameraFront);
         glm_vec3_scale(offset, -2, offset);
         glm_vec3_add(cam1Center, offset, cOffset);
-        drawLineVec(cam1Center, cOffset);
-        drawPoint(cam1Center, colorUniform);
+        SET_COLOR(colorUniform, BLUE);
+        // drawLineVec(cam1Center, cOffset);
+        // drawPoint(cOffset, colorUniform);
 
         // drawPoint(center, colorUniform);
         // drawPoint(cOffset, colorUniform);
         // glm_vec3_negate(cOffset);
-        drawLineDirection(cam1Center, cOffset);
+        // drawLineDirection(cam1Center, cOffset);
         // drawPoint(center, colorUniform);
         
         // float angle = glm_rad(20 * i);
         // glm_rotate(model, angle, (vec3){1, 0.3, 0.5});
         // glm_rotate_x();
         
-        mat4 cameraMatrix;
-        glm_mat4_identity(cameraMatrix);
-        glm_lookat(cam1.cameraPos, cam1Center, cam1.cameraUp, cameraMatrix);
-        glm_mat4_inv(cameraMatrix, cameraMatrix);
-        glm_translate(cameraMatrix, (vec3){0, 0, 1});
-        glm_scale(cameraMatrix, (vec3){0.1, 0.1, 0.1});
-
-        if(mouseClick){
+        if(mouseClick && g->camIndex == 0){
             mouseClick = false;
             printf("%f %f\n", xPos, yPos);
             float x = (2.0f * xPos) / (float)g->width - 1.0f;
@@ -243,31 +281,33 @@ int main(){
             vec4 rayWorld4 = {};
             glm_mat4_inv(view, viewInv);
             glm_mat4_mulv(viewInv, rayEye, rayWorld4);
-            vec3 rayWorld = {rayWorld4[0], rayWorld4[1], rayWorld4[2]};
-
+            // rayWorld = {rayWorld4[0], rayWorld4[1], rayWorld4[2]};
+            
+            rayWorld[0] = rayWorld4[0];
+            rayWorld[1] = rayWorld4[1];
+            rayWorld[2] = rayWorld4[2];
+            
             glm_vec3_normalize(rayWorld);
-            glm_vec3_print(rayWorld, stdout);
+            // glm_vec3_print(rayWorld, stdout);
+            // glm_vec3_scale(clickVec, 2, clickVec);
             glm_vec3_add(g->camera->cameraPos, rayWorld, clickVec);
+            intersectionDown(cam1.cameraPos, clickVec, &floorPos);
         }
 
         drawPoint(clickVec, colorUniform);
-        drawLineVec(g->camera->cameraPos, clickVec);
+        SET_COLOR(colorUniform, LIGHT_PURPLE);
+        drawDirection(cam1.cameraPos, clickVec, 10);
 
-        // glm_translate(cameraMatrix, cOffset);
-
-        // glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)cameraMatrix);
-        //
-        // SET_COLOR(colorUniform, WHITE);
-        // float near[] = {
-        //     -1, -1, 0, 0, 0,
-        //     1, -1, 0, 0, 0,
-        //     1, 1, 0, 0, 0,
-        //     -1, 1, 0, 0, 0,
-        // };
-        // glBufferData(GL_ARRAY_BUFFER, sizeof(near), near, GL_DYNAMIC_DRAW);
-        // glDrawArrays(GL_LINE_LOOP, 0, 4);
-        //
-        // glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)model);
+        drawPoint(floorPos, colorUniform);
+        vec3 blockPosClick = {roundf(floorPos[0]), roundf(floorPos[1]) + 1, roundf(floorPos[2])};
+        mat4 blockMatrix = {};
+        glm_mat4_identity(blockMatrix);
+        glm_translate(blockMatrix, blockPosClick);
+        glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)blockMatrix);
+        
+        glBufferData(GL_ARRAY_BUFFER, cubeSize, cube, GL_DYNAMIC_DRAW);
+        glDrawArrays(GL_LINE_LOOP, 0, 36);
+        glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)model);
 
         // SET_COLOR(colorUniform, LIGHT_PURPLE);
         // drawLineVec(center, cameraFront);
@@ -278,8 +318,6 @@ int main(){
         // drawPoint(cameraDirection, colorUniform);
         // drawPoint(cameraPos, colorUniform);
         
-        SET_COLOR(colorUniform, RED);
-        drawLineVec(center, pointZero);
         // glm_vec3_print(g->camera->cameraPos, stdout);
 
         // drawPoint(cameraPos, colorUniform);
@@ -294,26 +332,41 @@ int main(){
         // glBufferData(GL_ARRAY_BUFFER, sizeof(line2), line2, GL_DYNAMIC_DRAW);
         // glDrawArrays(GL_LINES, 0, 2);
 
-        SET_COLOR(colorUniform, RED);
-        float trig[] = {
-            -10, -1, 10, 0, 0,
-            10, -1, 10, 0, 0,
-            10, -1, -10, 0, 0
-        };
-        glBufferData(GL_ARRAY_BUFFER, sizeof(trig), trig, GL_STATIC_DRAW);
-        // glDrawArrays(GL_TRIANGLES, 0, 3);
-
         // struct BlockType block = blocksTypes[1];
 
+        SET_COLOR(colorUniform, GRAY);
+        float trig[] = {
+            -10, -0.5, -10, 0, 0,
+            -10, -0.5, 10, 0, 0,
+            10, -0.5, 10, 0, 0,
+            10, -0.5, -10, 0, 0
+        };
+        glBufferData(GL_ARRAY_BUFFER, sizeof(trig), trig, GL_STATIC_DRAW);
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
+        // draw camera view ///////////////////////////////////////////////////////
+        mat4 cameraMatrix;
+        glm_mat4_identity(cameraMatrix);
+        glm_lookat(cam1.cameraPos, cam1Center, cam1.cameraUp, cameraMatrix);
+        glm_mat4_inv(cameraMatrix, cameraMatrix);
+        glm_translate(cameraMatrix, (vec3){0, 0, 1});
+        glm_scale(cameraMatrix, (vec3){0.1, 0.1, 0.1});
+
+        glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)cameraMatrix);
+
+        SET_COLOR(colorUniform, WHITE);
+        float near[] = {
+            -1, -1, 0, 0, 0,
+            1, -1, 0, 0, 0,
+            1, 1, 0, 0, 0,
+            -1, 1, 0, 0, 0,
+        };
+        glBufferData(GL_ARRAY_BUFFER, sizeof(near), near, GL_DYNAMIC_DRAW);
+        glDrawArrays(GL_LINE_LOOP, 0, 4);
         // SET_COLOR(colorUniform, RED);
-        // float camera[] = {
-        //     -10, -1, 10, 0, 0,
-        //     10, -1, 10, 0, 0,
-        //     10, -1, -10, 0, 0
-        // };
-        // glBufferData(GL_ARRAY_BUFFER, sizeof(trig), trig, GL_STATIC_DRAW);
-        // glDrawArrays(GL_TRIANGLES, 0, 3);
+        // drawLineVec(cam1Center, pointZero);
+        glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)model);
+        ////////////////////////////////////////////////////////////////////////////
 
         glUniform4f(colorUniform, 0.5, 0.5, 0.5, 0);
         for(size_t i = 0; i < blocksTypesSize; i++){
@@ -360,7 +413,7 @@ int main(){
         // z axis
         // glUniform3f(colorUniform, 0, 0, 1);
         
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
         glDisable(GL_DEPTH_TEST);
         // glDepthMask(GL_FALSE);
@@ -380,47 +433,47 @@ int main(){
 }
 
 float cube[] = {
-    -0.5f, -0.5f, -0.5f,
-     0.5f, -0.5f, -0.5f,
-     0.5f,  0.5f, -0.5f,
-     0.5f,  0.5f, -0.5f,
-    -0.5f,  0.5f, -0.5f,
-    -0.5f, -0.5f, -0.5f,
+    -0.5f, -0.5f, -0.5f, 0, 0,
+     0.5f, -0.5f, -0.5f, 0, 0,
+     0.5f,  0.5f, -0.5f, 0, 0,
+     0.5f,  0.5f, -0.5f, 0, 0,
+    -0.5f,  0.5f, -0.5f, 0, 0,
+    -0.5f, -0.5f, -0.5f, 0, 0,
 
-    -0.5f, -0.5f,  0.5f,
-     0.5f, -0.5f,  0.5f,
-     0.5f,  0.5f,  0.5f,
-     0.5f,  0.5f,  0.5f,
-    -0.5f,  0.5f,  0.5f,
-    -0.5f, -0.5f,  0.5f,
+    -0.5f, -0.5f,  0.5f, 0, 0,
+     0.5f, -0.5f,  0.5f, 0, 0,
+     0.5f,  0.5f,  0.5f, 0, 0,
+     0.5f,  0.5f,  0.5f, 0, 0,
+    -0.5f,  0.5f,  0.5f, 0, 0,
+    -0.5f, -0.5f,  0.5f, 0, 0,
 
-    -0.5f,  0.5f,  0.5f,
-    -0.5f,  0.5f, -0.5f,
-    -0.5f, -0.5f, -0.5f,
-    -0.5f, -0.5f, -0.5f,
-    -0.5f, -0.5f,  0.5f,
-    -0.5f,  0.5f,  0.5f,
+    -0.5f,  0.5f,  0.5f, 0, 0,
+    -0.5f,  0.5f, -0.5f, 0, 0,
+    -0.5f, -0.5f, -0.5f, 0, 0,
+    -0.5f, -0.5f, -0.5f, 0, 0,
+    -0.5f, -0.5f,  0.5f, 0, 0,
+    -0.5f,  0.5f,  0.5f, 0, 0,
 
-     0.5f,  0.5f,  0.5f,
-     0.5f,  0.5f, -0.5f,
-     0.5f, -0.5f, -0.5f,
-     0.5f, -0.5f, -0.5f,
-     0.5f, -0.5f,  0.5f,
-     0.5f,  0.5f,  0.5f,
+     0.5f,  0.5f,  0.5f, 0, 0,
+     0.5f,  0.5f, -0.5f, 0, 0,
+     0.5f, -0.5f, -0.5f, 0, 0,
+     0.5f, -0.5f, -0.5f, 0, 0,
+     0.5f, -0.5f,  0.5f, 0, 0,
+     0.5f,  0.5f,  0.5f, 0, 0,
 
-    -0.5f, -0.5f, -0.5f,
-     0.5f, -0.5f, -0.5f,
-     0.5f, -0.5f,  0.5f,
-     0.5f, -0.5f,  0.5f,
-    -0.5f, -0.5f,  0.5f,
-    -0.5f, -0.5f, -0.5f,
+    -0.5f, -0.5f, -0.5f, 0, 0,
+     0.5f, -0.5f, -0.5f, 0, 0,
+     0.5f, -0.5f,  0.5f, 0, 0,
+     0.5f, -0.5f,  0.5f, 0, 0,
+    -0.5f, -0.5f,  0.5f, 0, 0,
+    -0.5f, -0.5f, -0.5f, 0, 0,
 
-    -0.5f,  0.5f, -0.5f,
-     0.5f,  0.5f, -0.5f,
-     0.5f,  0.5f,  0.5f,
-     0.5f,  0.5f,  0.5f,
-    -0.5f,  0.5f,  0.5f,
-    -0.5f,  0.5f, -0.5f
+    -0.5f,  0.5f, -0.5f, 0, 0,
+     0.5f,  0.5f, -0.5f, 0, 0,
+     0.5f,  0.5f,  0.5f, 0, 0,
+     0.5f,  0.5f,  0.5f, 0, 0,
+    -0.5f,  0.5f,  0.5f, 0, 0,
+    -0.5f,  0.5f, -0.5f, 0, 0
 };
 
 size_t cubeSize = sizeof(cube);

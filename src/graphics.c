@@ -1,5 +1,7 @@
 #include "graphics.h"
 
+#define UNPACK3(val) val[0], val[1], val[2]
+
 void GLAPIENTRY messageCallback(IGNORE GLenum source, IGNORE GLenum type, IGNORE GLuint id, GLenum severity, IGNORE GLsizei length, const GLchar* message, IGNORE const void* userParam){
     // UNUSEDS(source, id, length, userParam);
     const char *messageString = (type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : "" );
@@ -22,6 +24,15 @@ void drawLineVec(vec3 start, vec3 end){
     };
     glBufferData(GL_ARRAY_BUFFER, sizeof(line), line, GL_DYNAMIC_DRAW);
     glDrawArrays(GL_LINES, 0, 2);
+}
+
+void drawDirection(vec3 start, vec3 end, float size){
+    vec3 target = {};
+    glm_vec3_sub(end, start, target);
+    glm_vec3_normalize(target);
+    glm_vec3_scale(target, size, target);
+    glm_vec3_add(start, target, target);
+    drawLineVec(start, target);
 }
 
 void drawArrow(vec3 end, float scale){
