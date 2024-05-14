@@ -25,7 +25,14 @@ size_t cubeSize;
 vec3 clickVec = {0, 0, -1};
 
 vec3 rayWorld;
-vec3 floorPos = {};
+
+// selection
+struct BlockType *selected = NULL;
+vec3 intersectionPoint = {};
+vec3 addBlockPos = {};
+
+NEW_VECTOR_TYPE(float*, Vec3Vector);
+VECTOR_TYPE_FUNCTIONS(float*, Vec3Vector, "");
 
 void defineUi(struct Ui *ui){
     struct UiElement blockHolder = uiElementInit(ui);
@@ -40,7 +47,7 @@ void defineUi(struct Ui *ui){
     uiBake(ui);
 }
 
-void intersectionDown(vec3 point, vec3 direction, vec3 *rPos){
+void floorIntersection(vec3 point, vec3 direction, vec3 *rPos){
     // plane = Ax + By + Cz + D = 0
     // line =>
     //  ___
@@ -155,6 +162,8 @@ int main(){
     //
     // struct BlockType target = readBlock("Assets/Blocks/target");
 
+    struct Vec3Vector *intersections = Vec3VectorInit();
+
     while(!glfwWindowShouldClose(g->window)){
         float currFrame = glfwGetTime();
         g->deltaTime = currFrame - g->lastFrame;
@@ -258,7 +267,7 @@ int main(){
         
         if(mouseClick && g->camIndex == 0){
             mouseClick = false;
-            printf("%f %f\n", xPos, yPos);
+            // printf("%f %f\n", xPos, yPos);
             float x = (2.0f * xPos) / (float)g->width - 1.0f;
             float y = 1.0f - (2.0f * yPos) / (float)g->height;
             float z = 1.0f;
@@ -291,48 +300,70 @@ int main(){
             // glm_vec3_print(rayWorld, stdout);
             // glm_vec3_scale(clickVec, 2, clickVec);
             glm_vec3_add(g->camera->cameraPos, rayWorld, clickVec);
-            intersectionDown(cam1.cameraPos, clickVec, &floorPos);
+
+            for(size_t i = 0; i < intersections->size; i++){
+                free(intersections->data[i]);
+            }
+            intersections->size = 0;
+
+            float minVal = FLT_MAX;
+            vec3 minIntersectionPoint = {};
+
+            for(size_t i = 0; i < blocksTypesSize; i++){
+                float r = 0;
+                vec3 direction = {};
+                glm_vec3_sub(clickVec, cam1.cameraPos, direction);
+                glm_vec3_normalize(direction);
+                mat4 mat = {};
+                glm_mat4_identity(mat);
+                glm_translate(mat, cubePositions[i]);
+                if(intersection(&blocksTypes[i], cam1.cameraPos, direction, mat, &r)){
+                    glm_vec3_scale(direction, r, direction);
+                    glm_vec3_add(direction, cam1.cameraPos, direction);
+                    // drawPoint(direction, colorUniform);
+                    // if(r < minVal){
+                    //     minVal = r;
+                    //     ASSIGN3(minIntersectionPoint, direction);
+                    // }
+
+                    float *v = malloc(sizeof(float) * 3);
+                    memcpy(v, direction, sizeof(float) * 3);
+                    Vec3VectorPush(intersections, v);
+                }
+            }
+            
+            // if(minVal == FLT_MAX){
+                floorIntersection(cam1.cameraPos, clickVec, &intersectionPoint);
+                // ASSIGN3(intersectionPoint, blockPos);
+                // ASSIGN3(addBlockPos, intersectionPoint);
+            // }
+            // else{
+            //     ASSIGN3(intersectionPoint, minIntersectionPoint);
+            // }
+            fflush(stdout);
+        }
+
+        for(int i = 0; i < intersections->size; i++){
+            float *p = intersections->data[i];
+            // printf("%i %f %f %f\n", i, p[0], p[1], p[2]);
+            drawPoint(p, colorUniform);
         }
 
         drawPoint(clickVec, colorUniform);
         SET_COLOR(colorUniform, LIGHT_PURPLE);
         drawDirection(cam1.cameraPos, clickVec, 10);
 
-        drawPoint(floorPos, colorUniform);
-        vec3 blockPosClick = {roundf(floorPos[0]), roundf(floorPos[1]) + 1, roundf(floorPos[2])};
+        // draw selection box
+        drawPoint(intersectionPoint, colorUniform);
+        vec3 blockPos = {roundf(intersectionPoint[0]), roundf(intersectionPoint[1]) + 1, roundf(intersectionPoint[2])};
         mat4 blockMatrix = {};
         glm_mat4_identity(blockMatrix);
-        glm_translate(blockMatrix, blockPosClick);
+        glm_translate(blockMatrix, blockPos);
         glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)blockMatrix);
         
         glBufferData(GL_ARRAY_BUFFER, cubeSize, cube, GL_DYNAMIC_DRAW);
         glDrawArrays(GL_LINE_LOOP, 0, 36);
         glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)model);
-
-        // SET_COLOR(colorUniform, LIGHT_PURPLE);
-        // drawLineVec(center, cameraFront);
-        // SET_COLOR(colorUniform, BLUE);
-        // drawLineVec(pointZero, center);
-        // drawPoint(lookDir, colorUniform);
-        // drawPoint(center, colorUniform);
-        // drawPoint(cameraDirection, colorUniform);
-        // drawPoint(cameraPos, colorUniform);
-        
-        // glm_vec3_print(g->camera->cameraPos, stdout);
-
-        // drawPoint(cameraPos, colorUniform);
-        // glm_vec3_print(cameraDirection, stdout);
-        // glm_vec3_print(pos, stdout);
-        // float line2[] = {
-        //     x0, y0, z0, 0, 0,
-        //     a, b, c, 0, 0
-        //     // x, y, z, 0, 0,
-        //     // cameraDirection[0], cameraDirection[1], cameraDirection[2], 0, 0,
-        // };
-        // glBufferData(GL_ARRAY_BUFFER, sizeof(line2), line2, GL_DYNAMIC_DRAW);
-        // glDrawArrays(GL_LINES, 0, 2);
-
-        // struct BlockType block = blocksTypes[1];
 
         SET_COLOR(colorUniform, GRAY);
         float trig[] = {
@@ -379,39 +410,6 @@ int main(){
             glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)model);
             drawBlock(block);
         }
-        // glBufferData(GL_ARRAY_BUFFER, sizeof(float) * piston->dataSize, piston->data, GL_STATIC_DRAW);
-        // glBufferData(GL_ARRAY_BUFFER, sizeof(trig), trig, GL_STATIC_DRAW);
-        // glBufferData(GL_ARRAY_BUFFER, cubeSize, cube, GL_STATIC_DRAW);
-
-        // for(size_t i = 0; i < cubePositionsSize; i++){
-        //     glm_mat4_identity(model);
-        //     glm_translate(model, cubePositions[i]);
-        //
-        //     float angle = glm_rad(20 * i);
-        //     glm_rotate(model, angle, (vec3){1, 0.3, 0.5});
-        //
-        //     glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)model);
-        //
-        //     vec3 color = {0.5, 0.5, 0.5};
-        //     glm_vec3_rotate(color, angle, (vec3){0.4, -1.4, 2});
-        //     glUniform3fv(colorUniform, 1, (float*)color);
-        //     // glUniform3f(colorUniform, 0.5, 0.5, 0.5);
-        //     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        //     glDrawArrays(GL_TRIANGLES, 0, 36);
-        //
-        //     glUniform3f(colorUniform, 0, 0, 0);
-        //     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        //     glDrawArrays(GL_TRIANGLES, 0, 36);
-        // }
-
-        // drawGrid(-1, -1, -1, 4, 4, 4);
-        // x axis
-        // glUniform3f(colorUniform, 1, 0, 0);
-        // drawArrow(1, 0);
-        // y axis
-        // glUniform3f(colorUniform, 0, 1, 0);
-        // z axis
-        // glUniform3f(colorUniform, 0, 0, 1);
         
         // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 

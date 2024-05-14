@@ -22,8 +22,6 @@ https://static.wikia.nocookie.net/minecraft_gamepedia/images/0/0f/Compact-Redsto
 https://antongerdelan.net/opengl/raycasting.html
 
 ## OBB
-https://community.khronos.org/t/how-to-get-a-hit-point-vector-from-a-obb-raycast-test/75118
-https://antongerdelan.net/opengl/raycasting.html
 https://www.opengl-tutorial.org/miscellaneous/clicking-on-objects/picking-with-custom-ray-obb-function/
 https://www.realtimerendering.com/intersections.html
 

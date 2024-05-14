@@ -36,18 +36,17 @@ VECTOR_TYPE_FUNCTIONS(struct BlockType, BlockTypeVector, "")
 #define MAX(a, b) ((a < b) ? b : a)
 #define MIN(a, b) ((a < b) ? a : b)
 
-void boundingBox(struct BoundingBox *bb, float *data, size_t size){
+void findBoundingBox(struct BoundingBox *bb, float *data, size_t size){
     for(size_t i = 0; i < size; i += 5){
-        bb->minX = MIN(data[i + 0], bb->minX);
-        bb->minY = MIN(data[i + 1], bb->minY);
-        bb->minZ = MIN(data[i + 2], bb->minZ);
+        bb->min[0] = MIN(data[i + 0], bb->min[0]);
+        bb->min[1] = MIN(data[i + 1], bb->min[1]);
+        bb->min[2] = MIN(data[i + 2], bb->min[2]);
         
-        bb->maxX = MAX(data[i + 0], bb->maxX);
-        bb->maxY = MAX(data[i + 1], bb->maxY);
-        bb->maxZ = MAX(data[i + 2], bb->maxZ);
+        bb->max[0] = MAX(data[i + 0], bb->max[0]);
+        bb->max[1] = MAX(data[i + 1], bb->max[1]);
+        bb->max[2] = MAX(data[i + 2], bb->max[2]);
     }
 }
-
 
 GLuint loadAllBlocks(const char textureFile[]){
     size_t size;
@@ -89,7 +88,25 @@ struct BlockType loadBlock(const char fileName[]){
     block.data = data;
     block.dataSize = size;
 
-    boundingBox(&block.boundingBox, data, size);
+    block.boundingBox.min[0] = FLT_MAX;
+    block.boundingBox.min[1] = FLT_MAX;
+    block.boundingBox.min[2] = FLT_MAX;
+
+    block.boundingBox.max[0] = FLT_MIN;
+    block.boundingBox.max[1] = FLT_MIN;
+    block.boundingBox.max[2] = FLT_MIN;
+
+    struct BoundingBox *bb = &block.boundingBox;
+    findBoundingBox(bb, data, size);
+
+    printf("(%f %f %f) (%f %f %f)\n", 
+        block.boundingBox.min[0],
+        block.boundingBox.min[1],
+        block.boundingBox.min[2],
+
+        block.boundingBox.max[0],
+        block.boundingBox.max[1],
+        block.boundingBox.max[2]);
 
     return block;
 }
@@ -140,6 +157,56 @@ struct BlockType *loadBlocks(size_t *size){
     }
 
     return BlockTypeVectorDuplicate(blockTypeVector,size);
+}
+
+#define T_MIN 0.0f
+#define T_MAX 1000f
+
+#define INTERSECTION(axisIndex){ \
+    vec3 axis = {modelMatrix[axisIndex][0], modelMatrix[axisIndex][1], modelMatrix[axisIndex][2]};\
+    float e = glm_vec3_dot(axis, delta); \
+    float f = glm_vec3_dot(rayDirection, axis); \
+    if(0.001f < fabs(f)){\
+        float t1 = (e + bb.min[axisIndex]) / f;\
+        float t2 = (e + bb.max[axisIndex]) / f;\
+        if(t2 < t1){\
+            float t = t1;\
+            t1 = t2;\
+            t2 = t;\
+        }\
+        if(t2 < tMax){\
+            tMax = t2;\
+        }\
+        if(tMin < t1){\
+            tMin = t1;\
+        }\
+        if(tMax < tMin){\
+            return false;\
+        }\
+    }\
+    else{\
+        if(0.0f < -e + bb.min[axisIndex] || -e + bb.max[axisIndex] < 0.0f){\
+            return false;\
+        }\
+    }\
+}
+
+bool intersection(struct BlockType *block, vec3 rayOrigin, vec3 rayDirection, mat4 modelMatrix, float *r){
+    struct BoundingBox bb = block->boundingBox;
+
+    vec3 obbPos = {modelMatrix[3][0], modelMatrix[3][1], modelMatrix[3][2]};
+    vec3 delta = {};
+    glm_vec3_sub(obbPos, rayOrigin, delta);
+
+    float tMin = 0.0f;
+    float tMax = 1000.0f;
+
+    INTERSECTION(0);
+    INTERSECTION(1);
+    INTERSECTION(2);
+
+    *r = tMin;
+    return true;
 }
 
 void loadBuilding(const char fileName[]){

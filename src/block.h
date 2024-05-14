@@ -7,6 +7,13 @@
 #include <dirent.h>
 #include <string.h>
 
+#define CGLM_DEFINE_PRINTS 1
+#define DEBUG 1
+
+#include <cglm/cglm.h>
+#include <cglm/types.h>
+#include <cglm/io.h>
+
 #include "graphics.h"
 #include "func.h"
 
@@ -28,8 +35,8 @@ enum BLOCK_STATES{
 };
 
 struct BoundingBox{
-    float minX, minY, minZ;
-    float maxX, maxY, maxZ;
+    float min[3];
+    float max[3];
 };
 
 struct State{
@@ -79,5 +86,7 @@ struct BlockType *loadBlocks(size_t *size);
 void buildingExport(struct Building building);
 
 void drawBlock(struct BlockType block);
+
+bool intersection(struct BlockType *block, vec3 rayOrigin, vec3 rayDirection, mat4 modelMatrix, float *r);
 
 #endif

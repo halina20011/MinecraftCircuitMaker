@@ -34,6 +34,12 @@
 
 #define MAX_COMMAND_BUFFER_SIZE 200
 
+#define ASSIGN3(val1, val2) {\
+    val1[0] = val2[0];\
+    val1[1] = val2[1];\
+    val1[2] = val2[2];\
+}
+
 struct Graphics{
     GLFWwindow *window;
     int width, height;

@@ -9,6 +9,8 @@ extern size_t commandBufferSize;
 extern bool mouseClick;
 extern double xPos, yPos;
 
+bool moved = false;
+
 void processInput(){
     if(command){
         return;
@@ -98,6 +100,9 @@ void keyCallback(GLFWwindow *w, int key, int scancode, int action, int mods){
 void cursorPosCallback(GLFWwindow *w, double x, double y){
     UNUSED(x);
     UNUSED(y);
+    
+    moved = true;
+    // only allow to move view when the left button is pressed
     if(!glfwGetMouseButton(w, GLFW_MOUSE_BUTTON_LEFT)){
         g->camera->prevX = -1;
         return;
@@ -157,10 +162,17 @@ void framebufferSizeCallback(GLFWwindow *w, int width, int height){
     glViewport(0, 0, width, height);
 }
 
+double prevX, prevY;
 void mouseButtonCallback(GLFWwindow *w, int button, int action, int mods){
     if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS){
-        mouseClick = true;
+        moved = false;
+        glfwGetCursorPos(g->window, &prevX, &prevY);
+    }
+    if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE && !moved){
         glfwGetCursorPos(g->window, &xPos, &yPos);
+        if(prevX == xPos && prevY == yPos){
+            mouseClick = true;
+        }
     }
 }
 
@@ -174,7 +186,7 @@ uint8_t *readFile(const char fileName[], size_t *rSize){
     fseek(file, 0, SEEK_END);
     size_t size = ftell(file);
     fseek(file, 0, SEEK_SET);
- 
+
     void *data = malloc(size);
     fread(data, 1, size, file);
     fclose(file);
