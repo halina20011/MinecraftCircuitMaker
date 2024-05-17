@@ -60,9 +60,9 @@ class Vertex:
         return [self.x, self.y, self.z, self.uvX, self.uvY]
 
 class Item:
-    def __init__(self, modelName, index):
+    def __init__(self, modelName, modelId):
         self.name = modelName;
-        self.index = index;
+        self.modelId = modelId;
         self.obj = bpy.context.scene.objects.get(self.name);
         self.name = self.obj.name;
         
@@ -71,7 +71,9 @@ class Item:
     def export(self):
         file = os.path.join(blocksDir, self.name);
         with open(file, "wb") as f:
-            f.write(struct.pack("i", self.index));
+            # https://docs.python.org/3/library/struct.html#struct-format-strings
+            f.write(struct.pack("B", len(self.modelId)));
+            f.write(struct.pack(f"{len(self.modelId)}s", self.modelId.encode()));
             f.write(struct.pack("i", len(self.data)));
             f.write(struct.pack(f"{len(self.data)}f", *self.data));
             print(f"exported {self.name}");
@@ -141,7 +143,7 @@ def getObjects():
     for itemName in models:
         model = models[itemName];
         name = model["modelName"];
-        item = Item(name, model["index"]);
+        item = Item(name, model["id"]);
         items.append(item);
 
         print(item.name);

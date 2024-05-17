@@ -105,6 +105,8 @@ int main(){
     struct Ui *ui = uiInit(g->window);
     // defineUi(ui);
 
+    struct BlockSupervisor blockSupervisor;
+
     struct Shader *shader = shaderInit(VERTEX_SHADER, FRAGMENT_SHADER);
 
     GLint posAttrib = glGetAttribLocation(shader->program, "position");
@@ -113,6 +115,8 @@ int main(){
     glVertexAttribPointer(textAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (void*)(sizeof(float) * 3));
     glEnableVertexAttribArray(posAttrib);
     glEnableVertexAttribArray(textAttrib);
+    
+    blockSupervisorInit(&blockSupervisor);
 
     GLint modelUniformLocation      = getUniformLocation(shader, "model");
     GLint viewUniformLocation       = getUniformLocation(shader, "view");
@@ -122,28 +126,28 @@ int main(){
     GLint colorUniform = getUniformLocation(shader, "color");
     printf("texture uniform %i\n", textureUniform);
     
-    vec3 cubePositions[] = {
-        {-4, 0, -1},
-        {-2, 0, -2},
-        {0, 0, -2},
-        {2, 0, -2},
-        {4, 0, -2},
-        {6, 0, -2},
-        {8, 0, -2},
-        {10, 0, -2},
-    };
-    
-    const size_t cubePositionsSize = sizeof(cubePositions) / sizeof(vec3);
+    // vec3 cubePositions[] = {
+    //     {-4, 0, -1},
+    //     {-2, 0, -2},
+    //     {0, 0, -2},
+    //     {2, 0, -2},
+    //     {4, 0, -2},
+    //     {6, 0, -2},
+    //     {8, 0, -2},
+    //     {10, 0, -2},
+    // };
+    // 
+    // const size_t cubePositionsSize = sizeof(cubePositions) / sizeof(vec3);
 
     struct Text *text = NULL;
     // struct Text *text = textInit(&g->screenRatio);
     // text->screenRatio = &g->screenRatio;
     // SET_COLOR(text->colorUniform, RED);
 
-    size_t blocksTypesSize;
-    struct BlockType *blocksTypes = loadBlocks(&blocksTypesSize);
+    addBlock(&blockSupervisor, PISTON, (vec3){0, 0, 0}, (vec3){0, 0, 0});
+    addBlock(&blockSupervisor, PISTON, (vec3){2, 0, 0}, (vec3){0, 0, 0});
+
     GLuint t = loadAllBlocks("Assets/texture.bin");
-    // GLuint t = loadAllBlocks("Assets/texture.data");
     printf("texture %i\n", t);
 
     useShader(shader);
@@ -151,7 +155,6 @@ int main(){
     // glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, t);
     glUniform1i(textureUniform, t);
-    // shaderPrint(shader);
 
     GLint maxTexSize;
     glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexSize);
@@ -181,8 +184,6 @@ int main(){
 
         glEnable(GL_DEPTH_TEST);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        useShader(shader);
 
         mat4 view, projection, model;
         glm_mat4_identity(view);
@@ -309,15 +310,17 @@ int main(){
             float minVal = FLT_MAX;
             vec3 minIntersectionPoint = {};
 
-            for(size_t i = 0; i < blocksTypesSize; i++){
+            for(size_t i = 0; i < blockSupervisor.blocks->size; i++){
+                struct Block *block = blockSupervisor.blocks->data[i];
+                struct BlockType *blocksType = &blockSupervisor.blockTypes[block->blockTypeIndex];
                 float r = 0;
                 vec3 direction = {};
                 glm_vec3_sub(clickVec, cam1.cameraPos, direction);
                 glm_vec3_normalize(direction);
                 mat4 mat = {};
                 glm_mat4_identity(mat);
-                glm_translate(mat, cubePositions[i]);
-                if(intersection(&blocksTypes[i], cam1.cameraPos, direction, mat, &r)){
+                glm_translate(mat, block->position);
+                if(intersection(blocksType, cam1.cameraPos, direction, mat, &r)){
                     glm_vec3_scale(direction, r, direction);
                     glm_vec3_add(direction, cam1.cameraPos, direction);
                     // drawPoint(direction, colorUniform);
@@ -400,18 +403,23 @@ int main(){
         ////////////////////////////////////////////////////////////////////////////
 
         glUniform4f(colorUniform, 0.5, 0.5, 0.5, 0);
-        for(size_t i = 0; i < blocksTypesSize; i++){
-            struct BlockType block = blocksTypes[i];
-            // printf("%i\n", block.type);
-            glm_mat4_identity(model);
-            // vec3 pos = {x, y, z};
-            // glm_translate(model, pos);
-            glm_translate(model, cubePositions[i]);
-            glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)model);
-            drawBlock(block);
-        }
+        // for(size_t i = 0; i < BLOCKS_SIZE; i++){
+        //     struct BlockType block = blockSupervisor.blockTypes[i];
+        //     // printf("%i\n", block.type);
+        //     glm_mat4_identity(model);
+        //     vec3 pos = {i * 2, 0, -2};
+        //     glm_translate(model, pos);
+        //     // glm_translate(model, cubePositions[i]);
+        //     glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)model);
+        //     drawBlock(block);
+        // }
+
+        drawBlocks(&blockSupervisor, modelUniformLocation);
         
         // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+        // useShader(shader);
+        // drawBlocks(&blockSupervisor, modelUniformLocation);
 
         glDisable(GL_DEPTH_TEST);
         // glDepthMask(GL_FALSE);

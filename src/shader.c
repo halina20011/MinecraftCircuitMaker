@@ -1,6 +1,5 @@
 #include "./shader.h"
 
-
 GLint compileShader(const char *shaderSource, int type){
     // printf("%s\n", shaderSource);
     GLuint shader = glCreateShader(type);
