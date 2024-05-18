@@ -2,7 +2,7 @@
 
 #define MAX(a, b) ((a < b) ? b : a)
 
-VECTOR_TYPE_FUNCTIONS(struct UiElement, UiElementVector, "")
+VECTOR_TYPE_FUNCTIONS(struct UiElement, UiElementVector)
 
 // first create and ui instance with uiInit();
 // then define the ui from the top

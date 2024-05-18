@@ -20,15 +20,15 @@
 
 #include "blocks.h"
 
+#define QUADRANTS_SIZE 8
+
 #define MAX_BLOCK_ID_SIZE UINT8_MAX
 
 #define CHUNK_WIDTH     32
 #define CHUNK_DEPTH     32
 #define CHUNK_HEIGHT    32
 
-
 // paths
-
 #ifndef BLOCKS_DIR_PATH
 #define BLOCKS_DIR_PATH __BASE_FILE__
 #endif
@@ -100,8 +100,6 @@ NEW_VECTOR_TYPE(struct ChunkXVector*, ChunkYVector);
 // z vector of y
 NEW_VECTOR_TYPE(struct ChunkYVector*, ChunkZVector);
 
-#define QUADRANTS_SIZE 8
-
 struct Chunks{
     struct ChunkZVector *quadrants[QUADRANTS_SIZE];
 };
@@ -115,20 +113,45 @@ struct BlockSupervisor{
 
     ssize_t *blockDataStartIndex;
     GLuint blocksVBO;
+    GLuint blocksTexture;
 };
 
-GLuint loadAllBlocks(const char textureFile[]);
-struct BlockType *loadBlocks(bool **set, size_t *rDataSize);
-bool intersection(struct BlockType *block, vec3 rayOrigin, vec3 rayDirection, mat4 modelMatrix, float *r);
+enum ObjectType{
+    OBJECT_TYPE_BLOCK,
+    OBJECT_TYPE_BUILDING
+};
+
+struct Object{
+    char *name;
+    struct BoundingBox *bb;
+    void *object;
+    enum ObjectType objectType;
+};
+
 
 void blockSupervisorInit(struct BlockSupervisor *bs);
-struct Chunks *chunksInit();
 
+// BLOCK
 struct Block *addBlock(struct BlockSupervisor *bs, uint16_t id, vec3 pos, vec3 rot);
-
 void drawBlock(struct BlockType blockType);
-void drawBlocks(struct BlockSupervisor *bs, GLint modelUniformLocation);
+void drawBlocks(struct BlockSupervisor *bs, GLint modelUniformLocation, GLint textureUniform);
+bool blockIntersection(struct BlockType *block, vec3 rayOrigin, vec3 rayDirection, mat4 modelMatrix, float *r);
 
+// BLOCK TYPE
+bool loadBlock(const char fileName[], struct BlockType *block);
+uint16_t blockId(const char *id);
+void blockTypeBoundingBox(struct BoundingBox *bb, float *data, size_t size);
+struct BlockType *loadBlocks(bool **set, size_t *rDataSize);
+GLuint loadBlocksTexture(const char textureFile[]);
+
+// CHUNK
+struct Chunk *chunkInit();
+struct Chunks *chunksInit();
+void positionToQuadrant(struct Chunks *chunks, vec3 position, struct ChunkZVector **quadrant);
+struct Chunk *positionToChunk(vec3 position, struct ChunkZVector *quadrant);
+void addBlockToChunk(struct Chunk *chunk, struct Block *block);
+
+// BUILDING
 void buildingLoadDirectory(const char directoryPath[]);
 void buildingExport(struct BlockSupervisor *bS, const char fileName[]);
 void buildingLoad(struct BlockSupervisor *bs, const char fileName[]);

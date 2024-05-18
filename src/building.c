@@ -1,11 +1,17 @@
-#include "block.h"
+#include "object.h"
 
-VECTOR_TYPE_FUNCTIONS(struct Building*, BuildingPVector, "");
+VECTOR_TYPE_FUNCTIONS(struct Building*, BuildingPVector);
 
 // # BUILDING FILE FORMAT 
-// size of map uint32_t
-// # map entry
-//  [size of idStr][idStr] id(uint16_t)
+// size of blockTypes (uint32_t)
+// # blockType entry
+//  size of idStr (uint8_t)]
+//  idStr (char*)
+//  id (uint16_t)
+// size of buildings (uint32_t)
+// # building entry
+//  building size path (uint8_t)
+//  building path (char*)
 // blocks
 // number of blocks (uint32_t)
 // # block entry

@@ -2,8 +2,7 @@
 #include <stdlib.h>
 
 #include "./graphics.h"
-#include "./blocks.h"
-#include "./block.h"
+#include "./object.h"
 #include "color.h"
 
 #include "func.h"
@@ -32,7 +31,7 @@ vec3 intersectionPoint = {};
 vec3 addBlockPos = {};
 
 NEW_VECTOR_TYPE(float*, Vec3Vector);
-VECTOR_TYPE_FUNCTIONS(float*, Vec3Vector, "");
+VECTOR_TYPE_FUNCTIONS(float*, Vec3Vector);
 
 void defineUi(struct Ui *ui){
     struct UiElement blockHolder = uiElementInit(ui);
@@ -125,19 +124,6 @@ int main(){
     GLint textureUniform = getUniformLocation(shader, "textureSampler");
     GLint colorUniform = getUniformLocation(shader, "color");
     printf("texture uniform %i\n", textureUniform);
-    
-    // vec3 cubePositions[] = {
-    //     {-4, 0, -1},
-    //     {-2, 0, -2},
-    //     {0, 0, -2},
-    //     {2, 0, -2},
-    //     {4, 0, -2},
-    //     {6, 0, -2},
-    //     {8, 0, -2},
-    //     {10, 0, -2},
-    // };
-    // 
-    // const size_t cubePositionsSize = sizeof(cubePositions) / sizeof(vec3);
 
     struct Text *text = NULL;
     // struct Text *text = textInit(&g->screenRatio);
@@ -147,14 +133,11 @@ int main(){
     addBlock(&blockSupervisor, PISTON, (vec3){0, 0, 0}, (vec3){0, 0, 0});
     addBlock(&blockSupervisor, PISTON, (vec3){2, 0, 0}, (vec3){0, 0, 0});
 
-    GLuint t = loadAllBlocks("Assets/texture.bin");
-    printf("texture %i\n", t);
-
-    useShader(shader);
-    glActiveTexture(GL_TEXTURE0 + t);
-    // glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, t);
-    glUniform1i(textureUniform, t);
+    // GLuint t = loadAllBlocks();
+    //
+    // glActiveTexture(GL_TEXTURE0 + t);
+    // glBindTexture(GL_TEXTURE_2D, t);
+    // glUniform1i(textureUniform, t);
 
     GLint maxTexSize;
     glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexSize);
@@ -320,7 +303,7 @@ int main(){
                 mat4 mat = {};
                 glm_mat4_identity(mat);
                 glm_translate(mat, block->position);
-                if(intersection(blocksType, cam1.cameraPos, direction, mat, &r)){
+                if(blockIntersection(blocksType, cam1.cameraPos, direction, mat, &r)){
                     glm_vec3_scale(direction, r, direction);
                     glm_vec3_add(direction, cam1.cameraPos, direction);
                     // drawPoint(direction, colorUniform);
@@ -414,7 +397,7 @@ int main(){
         //     drawBlock(block);
         // }
 
-        drawBlocks(&blockSupervisor, modelUniformLocation);
+        drawBlocks(&blockSupervisor, modelUniformLocation, textureUniform);
         
         // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
