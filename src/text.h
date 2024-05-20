@@ -10,35 +10,38 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
+#define CGLM_DEFINE_PRINTS 1
+#define DEBUG 1
+
+#include <cglm/cglm.h>
+#include <cglm/types.h>
+#include <cglm/io.h>
+
 #include <cglm/vec3.h>
+#include <cglm/mat4.h>
 
 #include "./shader.h"
 #include "./shaders.h"
 
-#define PRINTABLE_CHARACTERS 95
+#define ASCII_TABLE_SIZE ((1 << 8) - 1)
 
-#define TEXTURE_SIZE 128
-
-#define BITMAP_WIDTH 128
-#define BITMAP_HEIGHT (BITMAP_WIDTH * PRINTABLE_CHARACTERS)
-#define BITMAP_COLOR 1
-#define BITMAP_SIZE (BITMAP_WIDTH * BITMAP_HEIGHT * BITMAP_COLOR)
-
-struct CharInfo{
-    GLuint texture;
-    uint8_t bearingLeft, bearingTop, width;
+struct TextInfo{
+    uint32_t index, size;
+    float width;
 };
 
 struct Text{
-    struct Shader *shader;
     GLuint textureUniform, colorUniform;
-    struct CharInfo asciiMap[127];
+    struct TextInfo asciiMap[ASCII_TABLE_SIZE];
+    GLuint VAO, VBO;
     float *screenRatio;
 };
 
-struct Text *textInit(float *screenRatio);
+struct Text *textInit(struct Shader *shader, float *screenRatio);
 
 void textColor(struct Text *text, struct Color color);
+
+void textDrawOnScreen(struct Text *text, char *str, float x, float y, GLint modelUniformLocation);
 void textDraw(struct Text *text, char *str, float x, float y, float size);
 
 #endif

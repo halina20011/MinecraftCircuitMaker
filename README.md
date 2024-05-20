@@ -32,8 +32,10 @@ gimp </br>
         - command line
 
 - mechanics
+    - move selected
     - show selected building
     - undo/redo
+    - copy paste selection
     - block names autocomplete
     - rotation minimap (maybe)
 

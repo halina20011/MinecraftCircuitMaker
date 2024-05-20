@@ -71,7 +71,7 @@ struct UiElement{
     // calculated
     float x, y;
     float width, height;
- 
+
     struct ElementColor color;
 
     uint8_t flags;
@@ -81,9 +81,9 @@ struct Ui{
     GLFWwindow *window;
     int width, height;
 
-    struct UiElementVector *uiElements;
+    struct UiElementPVector *uiElements;
 
-    struct UiElement root;
+    struct UiElement *root;
 
     size_t idCounter;
     size_t visibleElements;
@@ -92,13 +92,13 @@ struct Ui{
     size_t bakeSize;
     struct Shader *shader;
 };
-NEW_VECTOR_TYPE(struct UiElement, UiElementVector)
+NEW_VECTOR_TYPE(struct UiElement*, UiElementPVector)
 
 struct Ui *uiInit(GLFWwindow *w);
 
 void uiBake(struct Ui *ui);
 
-struct UiElement uiElementInit(struct Ui *ui);
+struct UiElement *uiElementInit(struct Ui *ui);
 struct UiElement *uiAddElement(struct UiElement *element, struct UiElement *parent, uint8_t posType, uint8_t sizeType, float x, float y, float width, float height);
 void uiDraw(struct Ui *ui);
 

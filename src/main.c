@@ -34,12 +34,15 @@ NEW_VECTOR_TYPE(float*, Vec3Vector);
 VECTOR_TYPE_FUNCTIONS(float*, Vec3Vector);
 
 void defineUi(struct Ui *ui){
-    struct UiElement blockHolder = uiElementInit(ui);
-    uiAddElement(&blockHolder, &ui->root, ABSOLUTE_PERCENTAGE, PERCENTAGE, 10, 20, 20, 90);
+    struct UiElement *blockHolder = uiElementInit(ui);
+    uiAddElement(blockHolder, ui->root, ABSOLUTE_PERCENTAGE, PERCENTAGE, 75, 5, 20, 90);
+    blockHolder->color = (struct ElementColor){40, 40, 40};
+    // printf("blockHolder %p %p\n", &blockHolder, blockHolder.parent);
+    // printf("%p\n", ui->uiElements->data[1].parent);
     
-    struct UiElement blockHolder2 = uiElementInit(ui);
-    blockHolder2.color = (struct ElementColor){255, 0, 0};
-    uiAddElement(&blockHolder2, &blockHolder, RELATIVE_PERCENTAGE, PERCENTAGE, 10, 10, 80, 20);
+    struct UiElement *blockHolder2 = uiElementInit(ui);
+    blockHolder2->color = (struct ElementColor){255, 0, 0};
+    uiAddElement(blockHolder2, blockHolder, RELATIVE_PERCENTAGE, PERCENTAGE, 50, 0, 80, 20);
     // the command line
     // uiAddElement(ui, ui->root, ABSOLUTE, );
 
@@ -102,7 +105,7 @@ int main(){
     graphicsAddCameras(g, cams, 2);
 
     struct Ui *ui = uiInit(g->window);
-    // defineUi(ui);
+    defineUi(ui);
 
     struct BlockSupervisor blockSupervisor;
 
@@ -125,8 +128,8 @@ int main(){
     GLint colorUniform = getUniformLocation(shader, "color");
     printf("texture uniform %i\n", textureUniform);
 
-    struct Text *text = NULL;
-    // struct Text *text = textInit(&g->screenRatio);
+    struct Text *text = textInit(shader, &g->screenRatio);
+    useShader(shader);
     // text->screenRatio = &g->screenRatio;
     // SET_COLOR(text->colorUniform, RED);
 
@@ -165,6 +168,7 @@ int main(){
         //     couter++;
         // }
 
+        useShader(shader);
         glEnable(GL_DEPTH_TEST);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -175,6 +179,13 @@ int main(){
 
         glUniformMatrix4fv(projectionUniformLocation, 1, GL_FALSE, (float*)projection);
         glUniformMatrix4fv(viewUniformLocation, 1, GL_FALSE, (float*)view);
+
+        // textDrawOnScreen(text, "UwU", -1, -1, modelUniformLocation);
+        if(command){
+            SET_COLOR(colorUniform, WHITE);
+            textDrawOnScreen(text, commandBuffer, -1, -1.0f + 0.02f, modelUniformLocation);
+        }
+        useShader(shader);
 
         vec3 look, cameraRight, currCameraUp;
         glm_vec3_copy(g->camera->cameraFront, look);
@@ -401,17 +412,13 @@ int main(){
         
         // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-        // useShader(shader);
         // drawBlocks(&blockSupervisor, modelUniformLocation);
 
         glDisable(GL_DEPTH_TEST);
         // glDepthMask(GL_FALSE);
         // glDepthFunc(GL_ALWAYS);
-        // uiDraw(ui);
+        uiDraw(ui);
 
-        // if(command){
-        //     textDraw(text, commandBuffer, -1, -1.0f + 0.01f, 0.05);
-        // }
         processInput();
         glfwSwapBuffers(g->window);
 
