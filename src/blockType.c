@@ -9,13 +9,23 @@
 #define MAX(a, b) ((a < b) ? b : a)
 #define MIN(a, b) ((a < b) ? a : b)
 
-uint16_t blockId(const char *id){
-    COMPARE("redstone_wire", REDSTONE_WIRE);
-    COMPARE("redstone_torch", REDSTONE_TORCH);
-    COMPARE("piston", PISTON);
-    COMPARE("sticky_piston", STICKY_PISTON);
-    COMPARE("target", TARGET);
+char **blockNames(){
+    char **names = malloc(sizeof(char**) * BLOCK_TYPES_SIZE);
+    names[REDSTONE_WIRE] = strdup("redstone_wire");
+    names[REDSTONE_TORCH] = strdup("redstone_torch");
+    names[PISTON] = strdup("piston");
+    names[STICKY_PISTON] = strdup("sticky_piston");
+    names[TARGET] = strdup("target");
 
+    return names;
+}
+
+uint16_t blockId(struct BlockSupervisor *bs, const char *id){
+    for(uint16_t i = 0; i < BLOCK_TYPES_SIZE; i++){
+        if(strcmp(id, bs->blockTypesNames[i]) == 0){
+            return i;
+        }
+    }
     fprintf(stderr, "block type was not found %s\n", id);
     return BLOCK_NOT_FOUND;
 }
@@ -40,7 +50,7 @@ void blockTypeBoundingBox(struct BoundingBox *bb, float *data, size_t size){
     }
 }
 
-bool loadBlock(const char fileName[], struct BlockType *block){
+bool loadBlock(struct BlockSupervisor *bs, const char fileName[], struct BlockType *block){
     FILE *file = fopen(fileName, "rb");
     if(file == NULL){
         fprintf(stderr, "failed to open file %s\n", fileName);
@@ -55,7 +65,7 @@ bool loadBlock(const char fileName[], struct BlockType *block){
     fread(&idStr, sizeof(char), idSize, file);
     idStr[idSize] = 0;
 
-    uint16_t id = blockId(idStr);
+    uint16_t id = blockId(bs, idStr);
     if(id == BLOCK_NOT_FOUND){
         return false;
     }
@@ -63,7 +73,7 @@ bool loadBlock(const char fileName[], struct BlockType *block){
     uint32_t size = 0;
     fread(&size, sizeof(uint32_t), 1, file);
 
-    printf("block size: %i\n", size);
+    // printf("block size: %i\n", size);
     float *data = malloc(sizeof(float) * size);
 
     fread(data, sizeof(float), size, file);
@@ -90,16 +100,16 @@ bool loadBlock(const char fileName[], struct BlockType *block){
     return true;
 }
 
-struct BlockType *loadBlocks(bool **set, size_t *rDataSize){
+struct BlockType *loadBlocks(struct BlockSupervisor *bs, bool **set, size_t *rDataSize){
     DIR *d = opendir(BLOCKS_DIR_PATH);
     if(!d){
         fprintf(stderr, "failed to open dir: %s\n", BLOCKS_DIR_PATH);
         exit(1);
     }
 
-    struct BlockType *blocks = calloc(BLOCKS_SIZE, sizeof(struct BlockType));
+    struct BlockType *blocks = calloc(BLOCK_TYPES_SIZE, sizeof(struct BlockType));
 
-    *set = calloc(BLOCKS_SIZE, sizeof(bool));
+    *set = calloc(BLOCK_TYPES_SIZE, sizeof(bool));
     size_t dataSizeEnd = 0;
 
     struct dirent *dir;
@@ -113,10 +123,10 @@ struct BlockType *loadBlocks(bool **set, size_t *rDataSize){
             // printf("%s %i\n", filePath, dir->d_type);
             struct BlockType blockType;
             // printf("%zu\n", dataSizeEnd);
-            if(loadBlock(filePath, &blockType)){
-                printf("new block %s: %i\n", blockType.idStr, blockType.id);
+            if(loadBlock(bs, filePath, &blockType)){
+                // printf("new block %s: %i\n", blockType.idStr, blockType.id);
                 uint16_t blockId = blockType.id;
-                printf("block id: %i\n", blockId);
+                // printf("block id: %i\n", blockId);
                 (*set)[blockId] = true;
                 blocks[blockId] = blockType;
                 dataSizeEnd += blockType.dataSize;
@@ -133,13 +143,13 @@ struct BlockType *loadBlocks(bool **set, size_t *rDataSize){
 GLuint loadBlocksTexture(const char textureFile[]){
     size_t size;
     uint8_t *data = readFile(textureFile, &size);
-    printf("texture size %zu\n", size);
+    // printf("texture size %zu\n", size);
     uint16_t w, h;
 
     memcpy(&w, data, sizeof(uint16_t));
     memcpy(&h, data + sizeof(uint16_t), sizeof(uint16_t));
     
-    printf("texture %ux%u\n", w, h);
+    // printf("texture %ux%u\n", w, h);
 
     return loadTexture(data + sizeof(uint16_t) * 2, w, h);
 }

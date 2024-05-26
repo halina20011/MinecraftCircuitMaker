@@ -3,18 +3,20 @@
 #define T_MIN 0.0f
 #define T_MAX 1000f
 
-struct Block *addBlock(struct BlockSupervisor *bs, uint16_t id, vec3 pos, vec3 rot){
+struct Block *addBlock(struct BlockSupervisor *bs, uint16_t id, BlockPosition pos, uint8_t facing){
     struct Block *block = malloc(sizeof(struct Block));
-    block->blockTypeIndex = id;
-    ASSIGN3(block->position, pos);
-    ASSIGN3(block->rotation, rot);
-    block->groupIndex = 0;
+    block->id = id;
 
-    struct ChunkZVector *quadrant = NULL;
-    positionToQuadrant(bs->chunks, pos, &quadrant);
-    struct Chunk *chunk = positionToChunk(pos, quadrant);
+    ASSIGN3(block->position, pos);
+    block->facing = facing;
+    // ASSIGN3(block->rotation, rot);
+
+    struct Chunk *chunk = positionToChunk(bs, pos);
     addBlockToChunk(chunk, block);
     BlockPVectorPush(bs->blocks, block);
+
+    // bs->blockTypesHistogram[id]++;
+    // printf("%i %zu\n", id, bs->blockTypesHistogram[id]);
 
     return block;
 }
@@ -33,7 +35,7 @@ void drawBlocks(struct BlockSupervisor *bs, GLint modelUniformLocation, GLint te
 
     // glBindBuffer(GL_ARRAY_BUFFER, bs->blocksVBO);
 
-    // for(size_t i = 0; i < BLOCKS_SIZE; i++){
+    // for(size_t i = 0; i < BLOCK_TYPES_SIZE; i++){
     //     struct BlockType *blockType = &bs->blockTypes[i];
     //     if(blockType != NULL){
     //         printf("block %s %i %zu\n", blockType->idStr, blockType->id, blockType->dataSize);
@@ -46,7 +48,7 @@ void drawBlocks(struct BlockSupervisor *bs, GLint modelUniformLocation, GLint te
 
     for(size_t i = 0; i < bs->blocks->size; i++){
         struct Block *block = bs->blocks->data[i];
-        struct BlockType *blockType = &(bs->blockTypes[block->blockTypeIndex]);
+        struct BlockType *blockType = &(bs->blockTypes[block->id]);
         if(bs->blockDataStartIndex[blockType->id] == -1){
             printf("invalid\n");
             continue;
@@ -54,7 +56,31 @@ void drawBlocks(struct BlockSupervisor *bs, GLint modelUniformLocation, GLint te
 
         mat4 model;
         glm_mat4_identity(model);
-        glm_translate(model, block->position);
+
+        glm_translate(model, blockPosVec3(block->position));
+        vec3 rotation = {};
+        switch(block->facing){
+            case EAST:
+                break;
+            case SOUTH:
+                rotation[1] = -90;
+                break;
+            case WEST:
+                rotation[1] = 180;
+                break;
+            case NORTH:
+                rotation[1] = 90;
+                break;
+
+            case UP:
+                rotation[2] = 90;
+                break;
+            case DOWN:
+                rotation[2] = -90;
+                break;
+        }
+        glm_rotate_y(model, glm_rad(rotation[1]), model);
+        glm_rotate_z(model, glm_rad(rotation[2]), model);
         glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)model);
         // float angle = glm_rad(20 * i);
         // float angle = glm_rad(20 * i);
@@ -98,6 +124,7 @@ void drawBlocks(struct BlockSupervisor *bs, GLint modelUniformLocation, GLint te
         }\
         if(tMin < t1){\
             tMin = t1;\
+            *intersectionAxis = axisIndex;\
         }\
         if(tMax < tMin){\
             return false;\
@@ -110,7 +137,7 @@ void drawBlocks(struct BlockSupervisor *bs, GLint modelUniformLocation, GLint te
     }\
 }
 
-bool blockIntersection(struct BlockType *block, vec3 rayOrigin, vec3 rayDirection, mat4 modelMatrix, float *r){
+bool blockIntersection(struct BlockType *block, vec3 rayOrigin, vec3 rayDirection, mat4 modelMatrix, float *r, uint8_t *intersectionAxis){
     struct BoundingBox bb = block->boundingBox;
 
     vec3 obbPos = {modelMatrix[3][0], modelMatrix[3][1], modelMatrix[3][2]};

@@ -5,13 +5,4 @@
 #define UNUSED(x) (void)(x)
 #define UNUSEDS(...) (void)(__VA_ARGS__)
 
-#define APPEND_STRING(buffer, size, maxSize, val){\
-    if(maxSize <= size + 1){\
-        fprintf(stderr, "command is bigger then the max buffer size %i\n", MAX_COMMAND_BUFFER_SIZE); \
-        exit(1);\
-    }\
-    buffer[size++] = val;\
-    buffer[size] = 0;\
-}
-
 #endif

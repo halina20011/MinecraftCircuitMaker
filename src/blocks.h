@@ -12,11 +12,9 @@ enum BLOCKS{
     STICKY_PISTON,
     TARGET,
 
-    BLOCKS_SIZE
+    BLOCK_TYPES_SIZE
 };
 
 #define BLOCK_NOT_FOUND UINT16_MAX
-
-uint16_t blockId(const char *id);
 
 #endif

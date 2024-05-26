@@ -44,8 +44,8 @@ struct Ui *uiInit(GLFWwindow *w){
 }
 
 void uiElementCalc(struct Ui *ui, struct UiElement *element){
-    printf("el %p\n", element);
-    printf("par %p\n", element->parent);
+    // printf("el %p\n", element);
+    // printf("par %p\n", element->parent);
     switch(element->posType){
         case RELATIVE_PX:   
             element->x = element->parent->x + element->iX;
@@ -70,7 +70,7 @@ void uiElementCalc(struct Ui *ui, struct UiElement *element){
         element->height = element->iHeight;
     }
     else{
-        printf("i => %f %f\n", element->iWidth, element->iHeight);
+        // printf("i => %f %f\n", element->iWidth, element->iHeight);
         float pWidth = ui->width;
         float pHeight = ui->height;
 
@@ -87,13 +87,13 @@ void uiElementCalc(struct Ui *ui, struct UiElement *element){
             scaleX = scaleY;
         }
 
-        printf("scale => %f %f %f %f\n", pWidth, scaleX, pHeight, scaleY);
+        // printf("scale => %f %f %f %f\n", pWidth, scaleX, pHeight, scaleY);
         element->width = pWidth * scaleX;
         element->height = pHeight * scaleY;
     }
 
     ui->bakeSize++;
-    printf("calculated: %zu [%f %f] [%f %f]\n", element->id, element->x, element->y, element->width, element->height);
+    // printf("calculated: %zu [%f %f] [%f %f]\n", element->id, element->x, element->y, element->width, element->height);
     // for(size_t i = 0; i < element->childrenSize; i++){
     //     uiElementCalc(ui, element->children[i]);
     // }
@@ -166,7 +166,7 @@ void uiBake(struct Ui *ui){
                 data[i * 6 + 1] = normalizeY(data[i * 6 + 1], ui->height);
                 memcpy(&data[i * 6 + 2], color, sizeof(float) * 4);
             }
-            printVertexData(data);
+            // printVertexData(data);
             memcpy(&ui->data[dataIndex], data, sizeof(float) * ELEMENT_DATE_SIZE);
             dataIndex += ELEMENT_DATE_SIZE;
         }
@@ -180,14 +180,14 @@ void uiBake(struct Ui *ui){
     //     1, -1, 0.5, 0, 0.5, 1,
     // };
     
-    printVertexData(ui->data);
+    // printVertexData(ui->data);
 
     useShader(ui->shader);
     glBufferData(GL_ARRAY_BUFFER, dataSize, ui->data, GL_STATIC_DRAW);
     // glBufferData(GL_ARRAY_BUFFER, sizeof(float) * ELEMENT_DATE_SIZE, ui->data, GL_STATIC_DRAW);
     // glBufferData(GL_ARRAY_BUFFER, dataSize, ui->data, GL_STATIC_DRAW);
     // glBufferData(GL_ARRAY_BUFFER, sizeof(testData), testData, GL_STATIC_DRAW);
-    printf("baked %zu\n", dataSize);
+    // printf("baked %zu\n", dataSize);
 }
 
 void uiDraw(struct Ui *ui){
@@ -206,20 +206,20 @@ struct UiElement *uiElementInit(struct Ui *ui){
     
     element->id = ui->idCounter++;
     element->level = 0;
-    printf("new element %zu\n", element->id);
+    // printf("new element %zu\n", element->id);
     element->parent = NULL;
     element->childrenSize = 0;
     element->color = (struct ElementColor){255, 255, 255};
     
     UiElementPVectorPush(ui->uiElements, element);
-    printf("new size %zu\n", ui->uiElements->size);
+    // printf("new size %zu\n", ui->uiElements->size);
 
     return element;
 }
 
 struct UiElement *uiAddElement(struct UiElement *element, struct UiElement *parent, uint8_t posType, uint8_t sizeType, float x, float y, float width, float height){
     if(parent){
-        printf("adding parent %p %p\n", element, parent);
+        // printf("adding parent %p %p\n", element, parent);
         parent->childrenSize++;
         element->parent = parent;
         element->level = parent->level + 1;

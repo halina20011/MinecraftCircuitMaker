@@ -4,16 +4,17 @@
 #include "./graphics.h"
 #include "./object.h"
 #include "color.h"
+#include "commandLine.h"
+#include "interface.h"
 
 #include "func.h"
 #include "ui.h"
 #include "text.h"
 
 struct Graphics *g;
-
-bool command = false;
-char commandBuffer[MAX_COMMAND_BUFFER_SIZE];
-size_t commandBufferSize = 0;
+struct CommandLine *cmd;
+struct Text *text;
+struct Interface *interface;
 
 bool mouseClick = false;
 double xPos, yPos;
@@ -21,17 +22,21 @@ double xPos, yPos;
 float cube[];
 size_t cubeSize;
 
-vec3 clickVec = {0, 0, -1};
-
-vec3 rayWorld;
-
-// selection
-struct BlockType *selected = NULL;
-vec3 intersectionPoint = {};
-vec3 addBlockPos = {};
+bool placeBlock = false;
 
 NEW_VECTOR_TYPE(float*, Vec3Vector);
 VECTOR_TYPE_FUNCTIONS(float*, Vec3Vector);
+
+struct Option *optionsInit(){
+    char **blockTypeNames = blockNames();
+
+    struct Option *options = optionNew("", NULL, 2,
+        optionNew("use", NULL, 1, optionList(blockTypeNames, BLOCK_TYPES_SIZE, interfaceAddBlock, 0)),
+        optionNew("export", NULL, 1, optionNew("block", NULL, 0))
+    );
+
+    return options;
+}
 
 void defineUi(struct Ui *ui){
     struct UiElement *blockHolder = uiElementInit(ui);
@@ -49,47 +54,6 @@ void defineUi(struct Ui *ui){
     uiBake(ui);
 }
 
-void floorIntersection(vec3 point, vec3 direction, vec3 *rPos){
-    // plane = Ax + By + Cz + D = 0
-    // line =>
-    //  ___
-    //  | x = x0 + at
-    //  | y = y0 + bt
-    //  | z = z0 + ct
-    //  __
-
-    // plane => 0*x + 1*y + 0*z = 0
-    // line =>  y = y0 + bt
-    //
-    //  y0 + bt = 0
-    //  bt = -y0
-    //  t = -y0 / b
-
-    float x0 = point[0];
-    float y0 = point[1];
-    float z0 = point[2];
-
-    float a = direction[0] - x0;
-    float b = direction[1] - y0;
-    float c = direction[2] - z0;
-
-    float t = (-0.5 - y0) / b;
-
-    float x = x0 + a * t;
-    float y = y0 + b * t;
-    float z = z0 + c * t;
-
-    // WRONG => *rPos[n] = 1;
-    (*rPos)[0] = x;
-    (*rPos)[1] = y;
-    (*rPos)[2] = z;
-    // *rPos[1] = y;
-    // *rPos[2] = z;
-
-    // printf("(%f %f %f) (%f %f %f) %f (%f %f %f)\n", x0, y0, z0, a, b, c, tx, x, y, z);
-    // glm_vec3_print(*rPos, stdout);
-}
-
 int main(){
     // printf("%i %i\n", DEBUG, CGLM_DEFINE_PRINTS);
     // printf("UwU\n");
@@ -104,10 +68,16 @@ int main(){
     g = graphicsInit();
     graphicsAddCameras(g, cams, 2);
 
+    struct Option *options = optionsInit();
+    optionPrint(options, 0);
+    cmd = commandLineInit(options);
+
+    struct BlockSupervisor *blockSupervisor= blockSupervisorInit();
+
+    interface = interfaceInit(cmd, blockSupervisor, g);
+
     struct Ui *ui = uiInit(g->window);
     defineUi(ui);
-
-    struct BlockSupervisor blockSupervisor;
 
     struct Shader *shader = shaderInit(VERTEX_SHADER, FRAGMENT_SHADER);
 
@@ -117,8 +87,6 @@ int main(){
     glVertexAttribPointer(textAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (void*)(sizeof(float) * 3));
     glEnableVertexAttribArray(posAttrib);
     glEnableVertexAttribArray(textAttrib);
-    
-    blockSupervisorInit(&blockSupervisor);
 
     GLint modelUniformLocation      = getUniformLocation(shader, "model");
     GLint viewUniformLocation       = getUniformLocation(shader, "view");
@@ -128,30 +96,21 @@ int main(){
     GLint colorUniform = getUniformLocation(shader, "color");
     printf("texture uniform %i\n", textureUniform);
 
-    struct Text *text = textInit(shader, &g->screenRatio);
+    text = textInit(shader, &g->screenRatio);
     useShader(shader);
-    // text->screenRatio = &g->screenRatio;
-    // SET_COLOR(text->colorUniform, RED);
 
-    addBlock(&blockSupervisor, PISTON, (vec3){0, 0, 0}, (vec3){0, 0, 0});
-    addBlock(&blockSupervisor, PISTON, (vec3){2, 0, 0}, (vec3){0, 0, 0});
-
-    // GLuint t = loadAllBlocks();
-    //
-    // glActiveTexture(GL_TEXTURE0 + t);
-    // glBindTexture(GL_TEXTURE_2D, t);
-    // glUniform1i(textureUniform, t);
+    addBlock(blockSupervisor, PISTON, (BlockPosition){-5, 0, 0}, EAST);
+    addBlock(blockSupervisor, PISTON, (BlockPosition){-3, 0, 0}, SOUTH);
+    addBlock(blockSupervisor, PISTON, (BlockPosition){-1, 0, 0}, WEST);
+    addBlock(blockSupervisor, PISTON, (BlockPosition){1, 0, 0}, NORTH);
+    addBlock(blockSupervisor, PISTON, (BlockPosition){3, 0, 0}, UP);
+    addBlock(blockSupervisor, PISTON, (BlockPosition){5, 0, 0}, DOWN);
 
     GLint maxTexSize;
     glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexSize);
     printf("max texture size %i\n", maxTexSize);
 
-    // int prev = 0, curr;
-    // int couter = 0;
-    //
-    // struct BlockType target = readBlock("Assets/Blocks/target");
-
-    struct Vec3Vector *intersections = Vec3VectorInit();
+    // struct Vec3Vector *intersections = Vec3VectorInit();
 
     while(!glfwWindowShouldClose(g->window)){
         float currFrame = glfwGetTime();
@@ -181,9 +140,9 @@ int main(){
         glUniformMatrix4fv(viewUniformLocation, 1, GL_FALSE, (float*)view);
 
         // textDrawOnScreen(text, "UwU", -1, -1, modelUniformLocation);
-        if(command){
-            SET_COLOR(colorUniform, WHITE);
-            textDrawOnScreen(text, commandBuffer, -1, -1.0f + 0.02f, modelUniformLocation);
+        if(cmd->active){
+            commandLineDraw(cmd, modelUniformLocation, colorUniform);
+            // SET_COLOR(colorUniform, WHITE);
         }
         useShader(shader);
 
@@ -222,15 +181,6 @@ int main(){
         glUniformMatrix4fv(viewUniformLocation, 1, GL_FALSE, (float*)view);
         glUniformMatrix4fv(projectionUniformLocation, 1, GL_FALSE, (float*)projection);
         
-        // draw origin
-        // drawPoint(pointZero, colorUniform);
-        
-        // glBufferData(GL_ARRAY_BUFFER, sizeof(line), line, GL_DYNAMIC_DRAW);
-        // glDrawArrays(GL_LINES, 0, 2);
-        
-        // glm_vec3_print(pos, stdout);
-        // glm_vec3_print(cameraDirection, stdout);
-    
         float yawRad = glm_rad(cam1.yaw);
         float pitchRad = glm_rad(cam1.pitch);
         float xOffset = cos(yawRad) * cos(pitchRad);
@@ -247,119 +197,41 @@ int main(){
         glm_vec3_scale(offset, -2, offset);
         glm_vec3_add(cam1Center, offset, cOffset);
         SET_COLOR(colorUniform, BLUE);
-        // drawLineVec(cam1Center, cOffset);
-        // drawPoint(cOffset, colorUniform);
-
-        // drawPoint(center, colorUniform);
-        // drawPoint(cOffset, colorUniform);
-        // glm_vec3_negate(cOffset);
-        // drawLineDirection(cam1Center, cOffset);
-        // drawPoint(center, colorUniform);
         
-        // float angle = glm_rad(20 * i);
-        // glm_rotate(model, angle, (vec3){1, 0.3, 0.5});
-        // glm_rotate_x();
-        
-        if(mouseClick && g->camIndex == 0){
-            mouseClick = false;
-            // printf("%f %f\n", xPos, yPos);
-            float x = (2.0f * xPos) / (float)g->width - 1.0f;
-            float y = 1.0f - (2.0f * yPos) / (float)g->height;
-            float z = 1.0f;
-
-            vec3 rayEnd = {x, y, z};
-
-            vec4 rayClip = {rayEnd[0], rayEnd[1], -1.0, 1.0};
-
-            vec4 rayEye = {};
-            mat4 projInv = {};
-            glm_mat4_inv(projection, projInv);
-            glm_mat4_mulv(projInv, rayClip, rayEye);
-
-            rayEye[0] = rayEye[0];
-            rayEye[1] = rayEye[1];
-            rayEye[2] = -1;
-            rayEye[3] = 0.0;
-
-            mat4 viewInv = {};
-            vec4 rayWorld4 = {};
-            glm_mat4_inv(view, viewInv);
-            glm_mat4_mulv(viewInv, rayEye, rayWorld4);
-            // rayWorld = {rayWorld4[0], rayWorld4[1], rayWorld4[2]};
-            
-            rayWorld[0] = rayWorld4[0];
-            rayWorld[1] = rayWorld4[1];
-            rayWorld[2] = rayWorld4[2];
-            
-            glm_vec3_normalize(rayWorld);
-            // glm_vec3_print(rayWorld, stdout);
-            // glm_vec3_scale(clickVec, 2, clickVec);
-            glm_vec3_add(g->camera->cameraPos, rayWorld, clickVec);
-
-            for(size_t i = 0; i < intersections->size; i++){
-                free(intersections->data[i]);
-            }
-            intersections->size = 0;
-
-            float minVal = FLT_MAX;
-            vec3 minIntersectionPoint = {};
-
-            for(size_t i = 0; i < blockSupervisor.blocks->size; i++){
-                struct Block *block = blockSupervisor.blocks->data[i];
-                struct BlockType *blocksType = &blockSupervisor.blockTypes[block->blockTypeIndex];
-                float r = 0;
-                vec3 direction = {};
-                glm_vec3_sub(clickVec, cam1.cameraPos, direction);
-                glm_vec3_normalize(direction);
-                mat4 mat = {};
-                glm_mat4_identity(mat);
-                glm_translate(mat, block->position);
-                if(blockIntersection(blocksType, cam1.cameraPos, direction, mat, &r)){
-                    glm_vec3_scale(direction, r, direction);
-                    glm_vec3_add(direction, cam1.cameraPos, direction);
-                    // drawPoint(direction, colorUniform);
-                    // if(r < minVal){
-                    //     minVal = r;
-                    //     ASSIGN3(minIntersectionPoint, direction);
-                    // }
-
-                    float *v = malloc(sizeof(float) * 3);
-                    memcpy(v, direction, sizeof(float) * 3);
-                    Vec3VectorPush(intersections, v);
-                }
-            }
-            
-            // if(minVal == FLT_MAX){
-                floorIntersection(cam1.cameraPos, clickVec, &intersectionPoint);
-                // ASSIGN3(intersectionPoint, blockPos);
-                // ASSIGN3(addBlockPos, intersectionPoint);
-            // }
-            // else{
-            //     ASSIGN3(intersectionPoint, minIntersectionPoint);
-            // }
-            fflush(stdout);
+        if(g->camIndex == 0){
+            interfaceCursor(projection, view, &cam1);
         }
 
-        for(int i = 0; i < intersections->size; i++){
-            float *p = intersections->data[i];
-            // printf("%i %f %f %f\n", i, p[0], p[1], p[2]);
-            drawPoint(p, colorUniform);
-        }
-
-        drawPoint(clickVec, colorUniform);
+        drawPoint(interface->clickVec, colorUniform);
         SET_COLOR(colorUniform, LIGHT_PURPLE);
-        drawDirection(cam1.cameraPos, clickVec, 10);
+        drawDirection(cam1.cameraPos, interface->clickVec, 10);
 
         // draw selection box
-        drawPoint(intersectionPoint, colorUniform);
-        vec3 blockPos = {roundf(intersectionPoint[0]), roundf(intersectionPoint[1]) + 1, roundf(intersectionPoint[2])};
+        // drawPoint(interface->intersectionPoint, colorUniform);
+        // vec3 blockPos = {roundf(intersectionPoint[0]), roundf(intersectionPoint[1]) + 1, roundf(intersectionPoint[2])};
+        
+        // draw block selection box
         mat4 blockMatrix = {};
         glm_mat4_identity(blockMatrix);
-        glm_translate(blockMatrix, blockPos);
+        glm_translate(blockMatrix, blockPosVec3(interface->addBlockPos));
+
         glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)blockMatrix);
-        
+
         glBufferData(GL_ARRAY_BUFFER, cubeSize, cube, GL_DYNAMIC_DRAW);
         glDrawArrays(GL_LINE_LOOP, 0, 36);
+
+        // draw add selection box
+        if(!interface->floorIntersection){
+            mat4 blockMatrix2;
+            SET_COLOR(colorUniform, BLUE);
+            glm_mat4_identity(blockMatrix2);
+            glm_translate(blockMatrix2, blockPosVec3(interface->blockPos));
+
+            glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)blockMatrix2);
+            
+            glDrawArrays(GL_LINE_LOOP, 0, 36);
+        }
+
         glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)model);
 
         SET_COLOR(colorUniform, GRAY);
@@ -397,7 +269,7 @@ int main(){
         ////////////////////////////////////////////////////////////////////////////
 
         glUniform4f(colorUniform, 0.5, 0.5, 0.5, 0);
-        // for(size_t i = 0; i < BLOCKS_SIZE; i++){
+        // for(size_t i = 0; i < BLOCK_TYPES_SIZE; i++){
         //     struct BlockType block = blockSupervisor.blockTypes[i];
         //     // printf("%i\n", block.type);
         //     glm_mat4_identity(model);
@@ -408,7 +280,8 @@ int main(){
         //     drawBlock(block);
         // }
 
-        drawBlocks(&blockSupervisor, modelUniformLocation, textureUniform);
+        drawChunks(blockSupervisor);
+        drawBlocks(blockSupervisor, modelUniformLocation, textureUniform);
         
         // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 

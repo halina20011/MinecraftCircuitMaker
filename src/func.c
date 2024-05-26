@@ -1,20 +1,24 @@
 #include "graphics.h"
 
+#include "commandLine.h"
+
+#include "interface.h"
+
 extern struct Graphics *g;
-
-extern bool command;
-extern char commandBuffer[MAX_COMMAND_BUFFER_SIZE];
-extern size_t commandBufferSize;
-
-extern bool mouseClick;
-extern double xPos, yPos;
+extern struct CommandLine *cmd;
+extern struct Interface *interface;
 
 bool moved = false;
+// extern bool placeBlock;
 
 void processInput(){
-    if(command){
+    if(cmd->active){
         return;
     }
+
+    // if(glfwGetKey(g->window, GLFW_KEY_ENTER) == GLFW_PRESS){
+    //     placeBlock = true;
+    // }
 
     float cameraSpeed = 5.f * g->deltaTime;
     if(glfwGetKey(g->window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS){
@@ -67,11 +71,12 @@ void keyCallback(GLFWwindow *w, int key, int scancode, int action, int mods){
         g->camera = g->cams[g->camIndex];
     }
 
-    if(key == '/' && !command){
-        command = true;
-        APPEND_STRING(commandBuffer, commandBufferSize, MAX_COMMAND_BUFFER_SIZE, '/');
+    // start command line
+    if(key == '/' && !cmd->active){
+        cmd->active = true;
+        commandLineAdd(cmd, '/');
     }
-    else if(command && isprint(key)){
+    else if(cmd->active && isprint(key)){
         char c = key;
         if(isalpha(key)){
             c = tolower(key);
@@ -79,21 +84,26 @@ void keyCallback(GLFWwindow *w, int key, int scancode, int action, int mods){
                 c = toupper(c);
             }
         }
-        APPEND_STRING(commandBuffer, commandBufferSize, MAX_COMMAND_BUFFER_SIZE, c);
+        commandLineAdd(cmd, c);
+        struct Option *option = commandLineCurrOption(cmd);
+        printf("option %p\n", option);
+        optionPrint(option, 0);
     }
-    else if(key == GLFW_KEY_BACKSPACE && commandBufferSize){
-        commandBuffer[--commandBufferSize] = 0;
-        if(!commandBufferSize){
-            command = false;
+    else if(key == GLFW_KEY_BACKSPACE && cmd->commandSize){
+        cmd->command[--cmd->commandSize] = 0;
+        if(!cmd->commandSize){
+            cmd->active = false;
         }
     }
     else if(key == GLFW_KEY_ENTER){
-        APPEND_STRING(commandBuffer, commandBufferSize, MAX_COMMAND_BUFFER_SIZE, '\0');
-        command = false;
-        printf("%s\n", commandBuffer);
+        cmd->active = false;
+        printf("%s\n", cmd->command);
+        commandLineExecute(cmd);
+        cmd->commandSize = 0;
     }
     else if(key == GLFW_KEY_ESCAPE){
-        command = false;
+        cmd->commandSize = 0;
+        cmd->active = false;
     }
 }
 
@@ -166,12 +176,14 @@ double prevX, prevY;
 void mouseButtonCallback(GLFWwindow *w, int button, int action, int mods){
     if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS){
         moved = false;
+        // prevX = interface->screenX;
+        // prevY = interface->screenY;
         glfwGetCursorPos(g->window, &prevX, &prevY);
     }
     if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE && !moved){
-        glfwGetCursorPos(g->window, &xPos, &yPos);
-        if(prevX == xPos && prevY == yPos){
-            mouseClick = true;
+        glfwGetCursorPos(g->window, &interface->screenX, &interface->screenY);
+        if(interface->screenX == prevX && interface->screenY == prevY){
+            interface->mouseClick = true;
         }
     }
 }

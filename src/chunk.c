@@ -1,7 +1,13 @@
 #include "object.h"
 
-struct Chunk *chunkInit(){
+struct Chunk *chunkInit(uint8_t _x, uint8_t _y, uint8_t _z){
     struct Chunk *chunk = malloc(sizeof(struct Chunk));
+    
+    printf("new chunk %i %i %i\n", _x, _y, _z);
+    chunk->x = _x;
+    chunk->y = _y;
+    chunk->z = _z;
+
     struct Block ****grid = malloc(sizeof(struct Block***) * CHUNK_HEIGHT);
     for(uint8_t z = 0; z < CHUNK_HEIGHT; z++){
         grid[z] = malloc(sizeof(struct Block**) * CHUNK_DEPTH);
@@ -26,8 +32,8 @@ struct Chunks *chunksInit(){
     return chunks;
 }
 
-void positionToQuadrant(struct Chunks *chunks, vec3 position, struct ChunkZVector **quadrant){
-    float x = position[1], y = position[2];
+void positionToQuadrant(struct Chunks *chunks, BlockPosition position, struct ChunkZVector **quadrant){
+    float x = position[0], y = position[1];
     bool negative = (position[2] < 0);
     size_t index = 0;
     if(x < 0 && y < 0){
@@ -46,30 +52,38 @@ void positionToQuadrant(struct Chunks *chunks, vec3 position, struct ChunkZVecto
     *quadrant = chunks->quadrants[negative * 4 + index];
 }
 
-#define RESIZE_CHUNK(index, chunk, resizeFunc, newItemFunc)do{\
+#define RESIZE_CHUNK(index, chunk, vectorPush, newItemFunc, ...)do{\
     if(chunk->size <= index){\
-        size_t from = chunk->size;\
-        /*printf("resizing from %zu to %zu\n", from, index);*/\
-        resizeFunc(chunk, index + 1);\
-        for(size_t i = from; i < index + 1; i++){\
-            chunk->data[i] = NULL;\
+        while(chunk->size < index){\
+            vectorPush(chunk, NULL);\
         }\
-        chunk->data[index] = newItemFunc();\
+        vectorPush(chunk, newItemFunc(__VA_ARGS__));\
     }\
 }while(0)
 
-struct Chunk *positionToChunk(vec3 position, struct ChunkZVector *quadrant){
-    size_t z = labs(lroundf(position[2]));
-    size_t y = labs(lroundf(position[1]));
-    size_t x = labs(lroundf(position[0]));
+struct Chunk *positionToChunk(struct BlockSupervisor *bs, BlockPosition position){
+    struct ChunkZVector *quadrant = NULL;
+    positionToQuadrant(bs->chunks, position, &quadrant);
+
+
+    int8_t z = position[0] / CHUNK_HEIGHT;
+    int8_t y = position[1] / CHUNK_DEPTH;
+    int8_t x = position[2] / CHUNK_WIDTH;
     
-    RESIZE_CHUNK(z, quadrant, ChunkZVectorResize, ChunkYVectorInit);
+    printf("position to chunk: (%i %i %i) => %i %i %i\n", position[0], position[1], position[2], x, y, z);
+    
+    RESIZE_CHUNK(z, quadrant, ChunkZVectorPush, ChunkYVectorInit);
     
     struct ChunkYVector *chunkY = quadrant->data[z];
-    RESIZE_CHUNK(y, chunkY, ChunkYVectorResize, ChunkXVectorInit);
+    RESIZE_CHUNK(y, chunkY, ChunkYVectorPush, ChunkXVectorInit);
 
     struct ChunkXVector *chunkX = chunkY->data[y];
-    RESIZE_CHUNK(x, chunkX, ChunkXVectorResize, chunkInit);
+    bool newChunk = chunkX->size <= x;
+    printf("%zu %o %i\n", chunkX->size, x, newChunk);
+    RESIZE_CHUNK(x, chunkX, ChunkXVectorPush, chunkInit, x, y, z);
+    if(newChunk){
+        ChunkXVectorPush(bs->chunks->chunks, chunkX->data[x]);
+    }
 
     return chunkX->data[x];
 }
@@ -82,6 +96,17 @@ struct Chunk *positionToChunk(vec3 position, struct ChunkZVector *quadrant){
     rVal = (index % size);\
 }
 
+bool placeIsEmpty(struct BlockSupervisor *bs, BlockPosition position){
+    struct Chunk *chunk = positionToChunk(bs, position);
+
+    uint8_t x, y, z; 
+    FORMAT_INDEX(position[0], x, CHUNK_WIDTH);
+    FORMAT_INDEX(position[2], y, CHUNK_DEPTH);
+    FORMAT_INDEX(position[3], z, CHUNK_HEIGHT);
+
+    return (chunk->grid[z][y][x] == NULL);
+}
+
 void addBlockToChunk(struct Chunk *chunk, struct Block *block){
     uint8_t x, y, z; 
     FORMAT_INDEX(block->position[0], x, CHUNK_WIDTH);
@@ -89,4 +114,19 @@ void addBlockToChunk(struct Chunk *chunk, struct Block *block){
     FORMAT_INDEX(block->position[2], z, CHUNK_HEIGHT);
 
     chunk->grid[z][y][x] = block;
+}
+
+void drawChunk(struct Chunk *chunk){
+    // printf("%f %f %f\n", (float)chunk->x, (float)chunk->y, (float)chunk->z);
+    for(uint8_t z = 0; z < CHUNK_HEIGHT; z++){
+        drawLine(chunk->x, chunk->y, -z, chunk->x + CHUNK_DEPTH, chunk->y, -z);
+    }
+}
+
+void drawChunks(struct BlockSupervisor *bs){
+    struct ChunkXVector *vector = bs->chunks->chunks;
+    // printf("%zu\n", vector->size);
+    for(uint8_t i = 0; i < vector->size; i++){
+        drawChunk(vector->data[i]);
+    }
 }

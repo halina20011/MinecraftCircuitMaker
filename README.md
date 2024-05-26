@@ -27,8 +27,9 @@ gimp </br>
     - scene objects (blocks and buildings)
     - blocks/models
     - block position
+    - draw lines
     - text
-        - add better font
+        - dynamic size
         - command line
 
 - mechanics
@@ -38,6 +39,7 @@ gimp </br>
     - copy paste selection
     - block names autocomplete
     - rotation minimap (maybe)
+    - 2 point selection
 
 - circuit functionality
     - circuit2model (only 2d)
