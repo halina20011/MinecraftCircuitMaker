@@ -1,3 +1,5 @@
+// #include "func.h"
+
 #include "graphics.h"
 
 #include "commandLine.h"
@@ -66,9 +68,23 @@ void keyCallback(GLFWwindow *w, int key, int scancode, int action, int mods){
         return;
     }
 
+    // switch camera
     if(key == GLFW_KEY_TAB){
         g->camIndex = (g->camIndex + 1) % g->camSize;
         g->camera = g->cams[g->camIndex];
+    }
+
+    // switch block type
+    if(key == GLFW_KEY_DOWN){
+        if(interface->currBlockIndex == 0){
+            interface->currBlockIndex = interface->bs->availableBlockTypesSize - 1;
+        }
+        else{
+            interface->currBlockIndex--;
+        }
+    }
+    else if(key == GLFW_KEY_UP){
+        interface->currBlockIndex = (interface->currBlockIndex + 1) % interface->bs->availableBlockTypesSize;
     }
 
     // start command line
@@ -111,6 +127,9 @@ void cursorPosCallback(GLFWwindow *w, double x, double y){
     UNUSED(x);
     UNUSED(y);
     
+    interface->screenX = x;
+    interface->screenY = y;
+
     moved = true;
     // only allow to move view when the left button is pressed
     if(!glfwGetMouseButton(w, GLFW_MOUSE_BUTTON_LEFT)){
@@ -174,17 +193,27 @@ void framebufferSizeCallback(GLFWwindow *w, int width, int height){
 
 double prevX, prevY;
 void mouseButtonCallback(GLFWwindow *w, int button, int action, int mods){
-    if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS){
+    UNUSED(w);
+    UNUSED(mods);
+    if(action == GLFW_PRESS){
         moved = false;
-        // prevX = interface->screenX;
-        // prevY = interface->screenY;
-        glfwGetCursorPos(g->window, &prevX, &prevY);
     }
+
+    // if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS){
+    //     moved = false;
+    //     prevX = interface->screenX;
+    //     prevY = interface->screenY;
+    //     // glfwGetCursorPos(g->window, &prevX, &prevY);
+    // }
     if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE && !moved){
-        glfwGetCursorPos(g->window, &interface->screenX, &interface->screenY);
-        if(interface->screenX == prevX && interface->screenY == prevY){
+        // glfwGetCursorPos(g->window, &interface->screenX, &interface->screenY);
+        // if(interface->screenX == prevX && interface->screenY == prevY){
             interface->mouseClick = true;
-        }
+        // }
+    }
+
+    if(button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE && !moved){
+        interface->rightClick = true;
     }
 }
 

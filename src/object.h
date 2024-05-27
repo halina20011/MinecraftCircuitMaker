@@ -15,6 +15,7 @@
 #include <cglm/types.h>
 #include <cglm/io.h>
 
+#include "types.h"
 #include "graphics.h"
 #include "func.h"
 
@@ -60,7 +61,7 @@ struct BoundingBox{
 };
 
 struct BlockType{
-    uint16_t id;
+    BlockId id;
     char *idStr;
     float *data;
     size_t dataSize;
@@ -69,18 +70,11 @@ struct BlockType{
 
 NEW_VECTOR_TYPE(struct Block*, BlockPVector);
 
-typedef int32_t BlockPosition[3];
-
-// struct BlockPosition{
-//     int16_t [];
-// };
-
-#define blockPosVec3(a) (vec3){a[0], a[1], a[2]}
-
 struct Block{
     uint16_t id;
     BlockPosition position;
     uint8_t facing;
+    size_t index;
 };
 
 // BUILDING_FLIP_HORIZONTAL,
@@ -101,7 +95,8 @@ struct Building{
 NEW_VECTOR_TYPE(struct Building*, BuildingPVector);
 
 struct Chunk{
-    uint8_t x, y, z;
+    ChunkPosition x, y, z;
+    // uint8_t x, y, z;
     // 3d array to pointer of block
     struct Block ***(*grid);
 };
@@ -123,6 +118,8 @@ struct BlockSupervisor{
     struct BlockPVector *blocks;
 
     struct BlockType *blockTypes;
+    BlockId *availableBlockTypes;
+    size_t availableBlockTypesSize;
     char **blockTypesNames;
     size_t *blockTypesHistogram;
 
@@ -156,6 +153,7 @@ struct BlockSupervisor *blockSupervisorInit();
 
 // BLOCK
 struct Block *addBlock(struct BlockSupervisor *bs, uint16_t id, BlockPosition pos, uint8_t facing);
+void deleteBlock(struct BlockSupervisor *bs, BlockPosition position);
 void drawBlock(struct BlockType blockType);
 void drawBlocks(struct BlockSupervisor *bs, GLint modelUniformLocation, GLint textureUniform);
 bool blockIntersection(struct BlockType *block, vec3 rayOrigin, vec3 rayDirection, mat4 modelMatrix, float *r, uint8_t *intersectionAxis);
@@ -171,7 +169,7 @@ GLuint loadBlocksTexture(const char textureFile[]);
 // CHUNK
 struct Chunk *chunkInit(uint8_t _x, uint8_t _y, uint8_t _z);
 struct Chunks *chunksInit();
-bool placeIsEmpty(struct BlockSupervisor *bs, BlockPosition position);
+struct Block **blockPositionToChunkGrid(struct BlockSupervisor *bs, BlockPosition position);
 void positionToQuadrant(struct Chunks *chunks, BlockPosition position, struct ChunkZVector **quadrant);
 struct Chunk *positionToChunk(struct BlockSupervisor *bs, BlockPosition position);
 void addBlockToChunk(struct Chunk *chunk, struct Block *block);
@@ -179,7 +177,7 @@ void drawChunk(struct Chunk *chunk);
 void drawChunks(struct BlockSupervisor *bs);
 
 // BUILDING
-void buildingLoadDirectory(const char directoryPath[]);
+void buildingLoadFromDirectory(struct BlockSupervisor *bs, const char directoryPath[]);
 void buildingExport(struct BlockSupervisor *bS, const char fileName[]);
 void buildingLoad(struct BlockSupervisor *bs, const char fileName[]);
 

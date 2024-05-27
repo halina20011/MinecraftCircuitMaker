@@ -74,8 +74,6 @@ int main(){
 
     struct BlockSupervisor *blockSupervisor= blockSupervisorInit();
 
-    interface = interfaceInit(cmd, blockSupervisor, g);
-
     struct Ui *ui = uiInit(g->window);
     defineUi(ui);
 
@@ -98,6 +96,7 @@ int main(){
 
     text = textInit(shader, &g->screenRatio);
     useShader(shader);
+    interface = interfaceInit(cmd, blockSupervisor, g, text);
 
     addBlock(blockSupervisor, PISTON, (BlockPosition){-5, 0, 0}, EAST);
     addBlock(blockSupervisor, PISTON, (BlockPosition){-3, 0, 0}, SOUTH);
@@ -105,6 +104,14 @@ int main(){
     addBlock(blockSupervisor, PISTON, (BlockPosition){1, 0, 0}, NORTH);
     addBlock(blockSupervisor, PISTON, (BlockPosition){3, 0, 0}, UP);
     addBlock(blockSupervisor, PISTON, (BlockPosition){5, 0, 0}, DOWN);
+
+    // for(int z = 0; z < 10; z++){
+    //     for(int y = 0; y < 10; y++){
+    //         for(int x = 0; x < 10; x++){
+    //             addBlock(blockSupervisor, PISTON, (BlockPosition){x - 5, y - 5, z - 5}, EAST);
+    //         }
+    //     }
+    // }
 
     GLint maxTexSize;
     glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexSize);
@@ -139,6 +146,7 @@ int main(){
         glUniformMatrix4fv(projectionUniformLocation, 1, GL_FALSE, (float*)projection);
         glUniformMatrix4fv(viewUniformLocation, 1, GL_FALSE, (float*)view);
 
+        interfaceProcess(interface, modelUniformLocation);
         // textDrawOnScreen(text, "UwU", -1, -1, modelUniformLocation);
         if(cmd->active){
             commandLineDraw(cmd, modelUniformLocation, colorUniform);

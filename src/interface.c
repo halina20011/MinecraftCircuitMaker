@@ -2,12 +2,17 @@
 
 extern struct Interface *interface;
 
-struct Interface *interfaceInit(struct CommandLine *cmd, struct BlockSupervisor *bs, struct Graphics *g){
+struct Interface *interfaceInit(struct CommandLine *cmd, struct BlockSupervisor *bs, struct Graphics *g, struct Text *text){
     struct Interface *in = malloc(sizeof(struct Interface));
 
     in->cmd = cmd;
     in->bs = bs;
     in->g = g;
+    in->text = text;
+
+    in->currBlockIndex = 0;
+    in->mouseClick = false;
+    in->rightClick = false;
 
     return in;
 }
@@ -19,8 +24,26 @@ void interfaceAddBlock(){
     addBlock(interface->bs, blockType, interface->addBlockPos, EAST);
 }
 
-void interfaceProcess(struct Interface *interface){
+void interfaceProcess(struct Interface *in, GLint modelUniformLocation){
+    // draw selected block
+    char *currBlock = in->bs->blockTypes[in->currBlockIndex].idStr;
+    // int s = strlen(currBlock);
+    // printf("curr block %s %i\n", currBlock, s);
 
+    textDrawOnScreen(in->text, currBlock, -1, 1.f - 0.05f, modelUniformLocation);
+
+    // place block if needef
+    if(interface->mouseClick){
+        addBlock(interface->bs, interface->bs->availableBlockTypes[interface->currBlockIndex], interface->addBlockPos, EAST);
+        interface->mouseClick = false;
+    }
+    if(interface->rightClick){
+        // printf("right click\n");
+        if(!interface->floorIntersection){
+            deleteBlock(in->bs, interface->blockPos);
+        }
+        interface->rightClick = false;
+    }
 }
 
 void floorIntersection(vec3 point, vec3 direction, BlockPosition *rPos){
@@ -65,15 +88,7 @@ void floorIntersection(vec3 point, vec3 direction, BlockPosition *rPos){
     // glm_vec3_print(*rPos, stdout);
 }
 
-#define SELECT_FACE(sideVal, axisIndex)do{\
-}while(0)
-
 void interfaceCursor(mat4 projectionMatrix, mat4 viewMatrix, struct Camera *cam1){
-    if(!interface->mouseClick){
-        return;
-    }
-    interface->mouseClick = false;
-
     float x = (2.0f * interface->screenX) / (float)interface->g->width - 1.0f;
     float y = 1.0f - (2.0f * interface->screenY) / (float)interface->g->height;
     float z = 1.0f;

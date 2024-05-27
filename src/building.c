@@ -2,7 +2,7 @@
 
 VECTOR_TYPE_FUNCTIONS(struct Building*, BuildingPVector);
 
-// # BUILDING FILE FORMAT 
+// # SCENE FILE FORMAT 
 // size of blockTypes (uint16_t)
 // ----- BLOCKTYPE ENTRY -----
 //  size of idStr (uint8_t)]
@@ -26,8 +26,29 @@ VECTOR_TYPE_FUNCTIONS(struct Building*, BuildingPVector);
 //  rotation (uint8_t)
 //  abs pos of origin (x, y, z)
 
-void buildingLoadDirectory(const char directoryPath[]){
-    DIR *d = opendir(BLOCKS_DIR_PATH);
+// # BUILDING FILE FORMAT
+// size of blockTypes (uint16_t)
+// ----- BLOCKTYPE ENTRY -----
+//  size of idStr (uint8_t)]
+//  idStr (char*)
+//  id (uint16_t)
+//
+// number of blocks (uint32_t)
+// ----- BLOCK ENTRY -----
+//  id (uint16_t) 
+//  abs pos (x, y, z int16_t)
+//  rotation (uint8_t)
+
+void buildingReload(struct Building *building){
+
+}
+
+void buildingLoad(struct BlockSupervisor *bs, const char fileName[]){
+    
+}
+
+void buildingLoadFromDirectory(struct BlockSupervisor *bs, const char directoryPath[]){
+    DIR *d = opendir(directoryPath);
     if(!d){
         fprintf(stderr, "failed to open dir: %s\n", BLOCKS_DIR_PATH);
         exit(1);
@@ -40,18 +61,10 @@ void buildingLoadDirectory(const char directoryPath[]){
             strcpy(filePath, BLOCKS_DIR_PATH);
             strcat(filePath, "/");
             strcat(filePath, dir->d_name);
-
+            buildingLoad(bs, filePath);
         }
     }
     closedir(d);
-}
-
-void buildingExport(struct BlockSupervisor *bS, const char fileName[]){
-    
-}
-
-void buildingLoad(struct BlockSupervisor *bs, const char fileName[]){
-    
 }
 
 void blockExport(struct BlockSupervisor *bs, bool unwrapBuildings, const char path[]){

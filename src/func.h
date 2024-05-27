@@ -16,6 +16,7 @@
 #include <cglm/vec4.h>
 
 #include "vector.h"
+#include "gHeader.h"
 
 void processInput();
 

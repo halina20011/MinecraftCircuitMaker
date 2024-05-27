@@ -26,6 +26,8 @@ struct BlockSupervisor *blockSupervisorInit(){
     bool *set;
     // load all blocks that are in the directory
     struct BlockType *blockTypes = loadBlocks(bs, &set, &dataSize);
+    bs->availableBlockTypes = malloc(sizeof(uint16_t) * BLOCK_TYPES_SIZE);
+
     // crete a block's type data buffer that will be send to GPU
     // and then later used to draw blocks
     float *modelsData = malloc(sizeof(float) * dataSize);
@@ -35,6 +37,7 @@ struct BlockSupervisor *blockSupervisorInit(){
     ssize_t *blockDataStartIndex = calloc(BLOCK_TYPES_SIZE, sizeof(ssize_t));
 
     ssize_t dataSizeEnd = 0;
+    uint16_t index = 0;
     for(size_t i = 0; i < BLOCK_TYPES_SIZE; i++){
         if(set[i]){
             struct BlockType *blockType = &blockTypes[i];
@@ -43,11 +46,13 @@ struct BlockSupervisor *blockSupervisorInit(){
             printf("%zu %zu %zu\n", startIndex, dataSize, blockType->dataSize);
             memcpy(&modelsData[startIndex], blockType->data, blockType->dataSize);
             dataSizeEnd += blockType->dataSize;
+            bs->availableBlockTypes[index++] = i;
         }
         else{
             blockDataStartIndex[i] = -1;
         }
     }
+    bs->availableBlockTypesSize = index;
 
     // glGenBuffers(1, &bs->blocksVBO);
     // glBindBuffer(GL_ARRAY_BUFFER, bs->blocksVBO);
@@ -69,6 +74,8 @@ struct BlockSupervisor *blockSupervisorInit(){
     // init buildings
     bs->buildings = BuildingPVectorInit();
     bs->buildingsHistogram = HistogramVectorInit();
+
+    buildingLoadFromDirectory(bs, BLOCKS_DIR_PATH);
     
     // load
     bs->chunks = chunksInit();

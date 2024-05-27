@@ -31,9 +31,9 @@ struct Text *textInit(struct Shader *shader, float *screenRatio){
         text->asciiMap[(int)c].index = bufferIndex / 5;
         text->asciiMap[(int)c].size = size / 5;
         float width = 0;
-        for(uint32_t i = 0; i < size; i += 5){
-            if(width < data[i]){
-                width = data[i];
+        for(uint32_t j = 0; j < size; j += 5){
+            if(width < data[j]){
+                width = data[j];
             }
         }
         text->asciiMap[(int)c].width = width;

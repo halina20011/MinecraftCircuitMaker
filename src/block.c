@@ -4,6 +4,8 @@
 #define T_MAX 1000f
 
 struct Block *addBlock(struct BlockSupervisor *bs, uint16_t id, BlockPosition pos, uint8_t facing){
+    deleteBlock(bs, pos);
+
     struct Block *block = malloc(sizeof(struct Block));
     block->id = id;
 
@@ -11,14 +13,38 @@ struct Block *addBlock(struct BlockSupervisor *bs, uint16_t id, BlockPosition po
     block->facing = facing;
     // ASSIGN3(block->rotation, rot);
 
-    struct Chunk *chunk = positionToChunk(bs, pos);
-    addBlockToChunk(chunk, block);
+    struct Block **blockPosition = blockPositionToChunkGrid(bs, pos);
+    *blockPosition = block;
+    // addBlockToChunk(chunk, block);
+
+    block->index = bs->blocks->size;
     BlockPVectorPush(bs->blocks, block);
 
     // bs->blockTypesHistogram[id]++;
     // printf("%i %zu\n", id, bs->blockTypesHistogram[id]);
 
     return block;
+}
+
+void deleteBlock(struct BlockSupervisor *bs, BlockPosition position){
+    struct Block **blockPointer = blockPositionToChunkGrid(bs, position);
+    if(*blockPointer == NULL){
+        return;
+    }
+
+    struct Block *block = *blockPointer;
+    *blockPointer = NULL;
+
+    // swap the block with the last one if needed
+    if(bs->blocks->size != 1){
+        struct Block *lastBlock = bs->blocks->data[bs->blocks->size - 1];
+        lastBlock->index = block->index;
+        bs->blocks->data[lastBlock->index] = lastBlock;
+    }
+
+    bs->blocks->size--;
+    // printf("freeing block %p\n", block);
+    free(block);
 }
 
 void drawBlock(struct BlockType blockType){

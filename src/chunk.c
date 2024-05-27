@@ -3,7 +3,7 @@
 struct Chunk *chunkInit(uint8_t _x, uint8_t _y, uint8_t _z){
     struct Chunk *chunk = malloc(sizeof(struct Chunk));
     
-    printf("new chunk %i %i %i\n", _x, _y, _z);
+    // printf("new chunk %i %i %i\n", _x, _y, _z);
     chunk->x = _x;
     chunk->y = _y;
     chunk->z = _z;
@@ -49,6 +49,7 @@ void positionToQuadrant(struct Chunks *chunks, BlockPosition position, struct Ch
         index = 0;
     }
 
+    // printf("quadrant %zu\n", negative * 4 + index);
     *quadrant = chunks->quadrants[negative * 4 + index];
 }
 
@@ -61,16 +62,27 @@ void positionToQuadrant(struct Chunks *chunks, BlockPosition position, struct Ch
     }\
 }while(0)
 
+#define FORMAT_CHUNK(val, rVal, size){\
+    int16_t index = lroundf(val);\
+    if(val < 0){\
+        index = -index - 1;\
+    }\
+    rVal = (index / size);\
+}
+
 struct Chunk *positionToChunk(struct BlockSupervisor *bs, BlockPosition position){
     struct ChunkZVector *quadrant = NULL;
     positionToQuadrant(bs->chunks, position, &quadrant);
 
-
-    int8_t z = position[0] / CHUNK_HEIGHT;
-    int8_t y = position[1] / CHUNK_DEPTH;
-    int8_t x = position[2] / CHUNK_WIDTH;
+    int16_t x, y, z;
+    // int8_t z = position[2] / CHUNK_HEIGHT;
+    // int8_t y = position[1] / CHUNK_DEPTH;
+    // int8_t x = position[0] / CHUNK_WIDTH;
+    FORMAT_CHUNK(position[0], x, CHUNK_WIDTH);
+    FORMAT_CHUNK(position[1], y, CHUNK_DEPTH);
+    FORMAT_CHUNK(position[2], z, CHUNK_HEIGHT);
     
-    printf("position to chunk: (%i %i %i) => %i %i %i\n", position[0], position[1], position[2], x, y, z);
+    // printf("position to chunk: (%i %i %i) => (%i %i %i)\n", position[0], position[1], position[2], x, y, z);
     
     RESIZE_CHUNK(z, quadrant, ChunkZVectorPush, ChunkYVectorInit);
     
@@ -79,7 +91,7 @@ struct Chunk *positionToChunk(struct BlockSupervisor *bs, BlockPosition position
 
     struct ChunkXVector *chunkX = chunkY->data[y];
     bool newChunk = chunkX->size <= x;
-    printf("%zu %o %i\n", chunkX->size, x, newChunk);
+    // printf("%zu %o %i\n", chunkX->size, x, newChunk);
     RESIZE_CHUNK(x, chunkX, ChunkXVectorPush, chunkInit, x, y, z);
     if(newChunk){
         ChunkXVectorPush(bs->chunks->chunks, chunkX->data[x]);
@@ -91,20 +103,20 @@ struct Chunk *positionToChunk(struct BlockSupervisor *bs, BlockPosition position
 #define FORMAT_INDEX(val, rVal, size){\
     long index = lroundf(val);\
     if(val < 0){\
-        index = -(index + 1);\
+        index = -index - 1;\
     }\
     rVal = (index % size);\
 }
 
-bool placeIsEmpty(struct BlockSupervisor *bs, BlockPosition position){
+struct Block **blockPositionToChunkGrid(struct BlockSupervisor *bs, BlockPosition position){
     struct Chunk *chunk = positionToChunk(bs, position);
 
     uint8_t x, y, z; 
     FORMAT_INDEX(position[0], x, CHUNK_WIDTH);
-    FORMAT_INDEX(position[2], y, CHUNK_DEPTH);
-    FORMAT_INDEX(position[3], z, CHUNK_HEIGHT);
+    FORMAT_INDEX(position[1], y, CHUNK_DEPTH);
+    FORMAT_INDEX(position[2], z, CHUNK_HEIGHT);
 
-    return (chunk->grid[z][y][x] == NULL);
+    return &chunk->grid[z][y][x];
 }
 
 void addBlockToChunk(struct Chunk *chunk, struct Block *block){
@@ -112,6 +124,7 @@ void addBlockToChunk(struct Chunk *chunk, struct Block *block){
     FORMAT_INDEX(block->position[0], x, CHUNK_WIDTH);
     FORMAT_INDEX(block->position[1], y, CHUNK_DEPTH);
     FORMAT_INDEX(block->position[2], z, CHUNK_HEIGHT);
+    // printf("block pos: %i %i %i\n", x, y, z);
 
     chunk->grid[z][y][x] = block;
 }
