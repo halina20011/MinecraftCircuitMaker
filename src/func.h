@@ -22,6 +22,7 @@ void processInput();
 
 // Callbacks
 void keyCallback(GLFWwindow *w, int key, int scancode, int action, int mods);
+void characterCallback(GLFWwindow *window, uint32_t codepoint);
 void cursorPosCallback(GLFWwindow *w, double x, double y);
 void scrollCallback(GLFWwindow *w, double x, double y);
 void framebufferSizeCallback(GLFWwindow *w, int width, int height);

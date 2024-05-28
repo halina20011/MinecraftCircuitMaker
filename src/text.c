@@ -75,7 +75,7 @@ struct Text *textInit(struct Shader *shader, float *screenRatio){
     return text;
 }
 
-void textDrawOnScreen(struct Text *text, char *str, float x, float y, GLint modelUniformLocation){
+float textDrawOnScreen(struct Text *text, char *str, float x, float y, GLint modelUniformLocation){
     glBindVertexArray(text->VAO);
     glBindBuffer(GL_ARRAY_BUFFER, text->VBO);
 
@@ -86,10 +86,13 @@ void textDrawOnScreen(struct Text *text, char *str, float x, float y, GLint mode
     float s = 0.05;
     glm_scale(model, (vec3){s, s * (*(text->screenRatio)), s});
 
+    float currOffset = 0;
     for(int i = 0; str[i]; i++){
         glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)model);
         if(str[i] == ' '){
-            glm_translate(model, (vec3){text->asciiMap[(int)'H'].width, 0, 0});
+            float offset = text->asciiMap[(int)'H'].width;
+            glm_translate(model, (vec3){offset, 0, 0});
+            currOffset += offset * s;
             continue;
         }
         
@@ -101,5 +104,9 @@ void textDrawOnScreen(struct Text *text, char *str, float x, float y, GLint mode
 
         glDrawArrays(GL_TRIANGLES, start, size);
         glm_translate(model, (vec3){offset, 0, 0});
+
+        currOffset += offset * s;
     }
+
+    return currOffset;
 }

@@ -24,6 +24,30 @@ void interfaceAddBlock(){
     addBlock(interface->bs, blockType, interface->addBlockPos, EAST);
 }
 
+void interfaceExportBuilding(){
+    struct CommandLine *cmd = interface->cmd;
+    char *path = &cmd->command[cmd->optionsIndicies[2]];
+    printf("exporting as building\n");
+    printf("path '%s'\n", path);
+    exportAsBuilding(interface->bs, path);
+}
+
+void interfaceExportScene(){
+    printf("exporting as scene");
+}
+
+void interfaceLoadBuilding(){
+    struct CommandLine *cmd = interface->cmd;
+    char *path = &cmd->command[cmd->optionsIndicies[2]];
+    printf("loading building\n");
+    printf("path '%s'\n", path);
+    buildingLoad(interface->bs, path);
+}
+
+void interfaceLoadScene(){
+    printf("exporting as scene");
+}
+
 void interfaceProcess(struct Interface *in, GLint modelUniformLocation){
     // draw selected block
     char *currBlock = in->bs->blockTypes[in->currBlockIndex].idStr;

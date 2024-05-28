@@ -3,7 +3,7 @@
 #define T_MIN 0.0f
 #define T_MAX 1000f
 
-struct Block *addBlock(struct BlockSupervisor *bs, uint16_t id, BlockPosition pos, uint8_t facing){
+struct Block *addBlock(struct BlockSupervisor *bs, BlockTypeId id, BlockPosition pos, BlockRotation facing){
     deleteBlock(bs, pos);
 
     struct Block *block = malloc(sizeof(struct Block));
@@ -20,7 +20,7 @@ struct Block *addBlock(struct BlockSupervisor *bs, uint16_t id, BlockPosition po
     block->index = bs->blocks->size;
     BlockPVectorPush(bs->blocks, block);
 
-    // bs->blockTypesHistogram[id]++;
+    bs->blockTypesHistogram[id]++;
     // printf("%i %zu\n", id, bs->blockTypesHistogram[id]);
 
     return block;
@@ -138,8 +138,8 @@ void drawBlocks(struct BlockSupervisor *bs, GLint modelUniformLocation, GLint te
     float e = glm_vec3_dot(axis, delta); \
     float f = glm_vec3_dot(rayDirection, axis); \
     if(0.001f < fabs(f)){\
-        float t1 = (e + bb.min[axisIndex]) / f;\
-        float t2 = (e + bb.max[axisIndex]) / f;\
+        float t1 = (e + bb->min[axisIndex]) / f;\
+        float t2 = (e + bb->max[axisIndex]) / f;\
         if(t2 < t1){\
             float t = t1;\
             t1 = t2;\
@@ -157,14 +157,14 @@ void drawBlocks(struct BlockSupervisor *bs, GLint modelUniformLocation, GLint te
         }\
     }\
     else{\
-        if(0.0f < -e + bb.min[axisIndex] || -e + bb.max[axisIndex] < 0.0f){\
+        if(0.0f < -e + bb->min[axisIndex] || -e + bb->max[axisIndex] < 0.0f){\
             return false;\
         }\
     }\
 }
 
 bool blockIntersection(struct BlockType *block, vec3 rayOrigin, vec3 rayDirection, mat4 modelMatrix, float *r, uint8_t *intersectionAxis){
-    struct BoundingBox bb = block->boundingBox;
+    struct BoundingBox *bb = &block->boundingBox;
 
     vec3 obbPos = {modelMatrix[3][0], modelMatrix[3][1], modelMatrix[3][2]};
     vec3 delta = {};

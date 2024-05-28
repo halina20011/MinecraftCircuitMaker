@@ -21,7 +21,8 @@
 
 enum OptionType{
     OPTION_SINGLE,
-    OPTION_MULTY
+    OPTION_MULTY,
+    OPTION_ARGUMENT
 };
 
 struct Option{
@@ -47,6 +48,9 @@ struct CommandLine{
 struct CommandLine *commandLineInit(struct Option *rootOption);
 void commandLineDraw(struct CommandLine *cmd, GLint modelUniformLocation, GLint colorUniform);
 
+void commandLinePaste(struct CommandLine *cmd);
+void commandLineCopy(struct CommandLine *cmd, struct GLFWwindow *w);
+
 struct Option *commandLineCurrOption(struct CommandLine *cmd);
 void commandSugestion(struct CommandLine *cmd, struct Option *o, bool *valid);
 
@@ -54,6 +58,7 @@ void commandLineExecute(struct CommandLine *cmd);
 
 struct Option *optionNew(const char name[], void *function, size_t size, ...);
 struct Option *optionList(char **list, size_t listSize, void *function, size_t size, ...);
+struct Option *optionArgument(void *function, size_t size, ...);
 
 void optionPrint(struct Option *option, uint8_t level);
 

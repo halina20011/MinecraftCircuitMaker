@@ -39,7 +39,7 @@ struct Text{
 
 struct Text *textInit(struct Shader *shader, float *screenRatio);
 
-void textDrawOnScreen(struct Text *text, char *str, float x, float y, GLint modelUniformLocation);
+float textDrawOnScreen(struct Text *text, char *str, float x, float y, GLint modelUniformLocation);
 void textDraw(struct Text *text, char *str, float x, float y, float size);
 
 #endif

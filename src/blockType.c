@@ -20,7 +20,7 @@ char **blockNames(){
     return names;
 }
 
-uint16_t blockId(struct BlockSupervisor *bs, const char *id){
+BlockTypeId blockId(struct BlockSupervisor *bs, const char *id){
     for(uint16_t i = 0; i < BLOCK_TYPES_SIZE; i++){
         if(strcmp(id, bs->blockTypesNames[i]) == 0){
             return i;
@@ -57,15 +57,15 @@ bool loadBlock(struct BlockSupervisor *bs, const char fileName[], struct BlockTy
         exit(1);
     }
     
-    uint8_t idSize = 0;
-    fread(&idSize, sizeof(uint8_t), 1, file);
+    BlockTypeIdStrSize idSize = 0;
+    fread(&idSize, sizeof(BlockTypeIdStrSize), 1, file);
     // printf("id size %i\n", idSize);
 
-    char idStr[MAX_BLOCK_ID_SIZE + 1];
-    fread(&idStr, sizeof(char), idSize, file);
+    BlockTypeIdStr idStr[MAX_BLOCK_ID_SIZE + 1];
+    fread(&idStr, sizeof(BlockTypeIdStr), idSize, file);
     idStr[idSize] = 0;
 
-    uint16_t id = blockId(bs, idStr);
+    BlockTypeId id = blockId(bs, idStr);
     if(id == BLOCK_NOT_FOUND){
         return false;
     }
@@ -125,7 +125,7 @@ struct BlockType *loadBlocks(struct BlockSupervisor *bs, bool **set, size_t *rDa
             // printf("%zu\n", dataSizeEnd);
             if(loadBlock(bs, filePath, &blockType)){
                 // printf("new block %s: %i\n", blockType.idStr, blockType.id);
-                uint16_t blockId = blockType.id;
+                BlockTypeId blockId = blockType.id;
                 // printf("block id: %i\n", blockId);
                 (*set)[blockId] = true;
                 blocks[blockId] = blockType;

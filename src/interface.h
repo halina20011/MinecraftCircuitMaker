@@ -16,7 +16,7 @@ struct Interface{
     bool mouseClick, rightClick;
 
     // block
-    BlockId currBlockIndex;
+    BlockTypeId currBlockIndex;
 
     // selection
     vec3 clickVec;
@@ -29,6 +29,10 @@ struct Interface *interfaceInit(struct CommandLine *cmd, struct BlockSupervisor 
 void interfaceCursor(mat4 projectionMatrix, mat4 viewMatrix, struct Camera *cam1);
 
 void interfaceAddBlock();
+void interfaceExportBuilding();
+void interfaceExportScene();
+void interfaceLoadBuilding();
+void interfaceLoadScene();
 
 void interfaceProcess(struct Interface *in, GLint modelUniformLocation);
 

@@ -64,6 +64,7 @@ void processInput(){
 void keyCallback(GLFWwindow *w, int key, int scancode, int action, int mods){
     UNUSED(w);
     UNUSED(scancode);
+    UNUSED(mods);
     if(action == GLFW_RELEASE){
         return;
     }
@@ -87,39 +88,77 @@ void keyCallback(GLFWwindow *w, int key, int scancode, int action, int mods){
         interface->currBlockIndex = (interface->currBlockIndex + 1) % interface->bs->availableBlockTypesSize;
     }
 
+    if(!cmd->active){
+        return;
+    }
+
     // start command line
-    if(key == '/' && !cmd->active){
-        cmd->active = true;
-        commandLineAdd(cmd, '/');
-    }
-    else if(cmd->active && isprint(key)){
-        char c = key;
-        if(isalpha(key)){
-            c = tolower(key);
-            if(glfwGetKey(w, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS){
-                c = toupper(c);
-            }
-        }
-        commandLineAdd(cmd, c);
-        struct Option *option = commandLineCurrOption(cmd);
-        printf("option %p\n", option);
-        optionPrint(option, 0);
-    }
-    else if(key == GLFW_KEY_BACKSPACE && cmd->commandSize){
+    if(key == GLFW_KEY_BACKSPACE && cmd->commandSize){
         cmd->command[--cmd->commandSize] = 0;
         if(!cmd->commandSize){
             cmd->active = false;
         }
     }
+    else if(glfwGetKey(w, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS){
+        switch(key){
+            case 'C':
+                // printf("copy text\n");
+                commandLineCopy(cmd, w);
+                break;
+            case 'V':
+                commandLinePaste(cmd);
+                break;
+            case 'W':
+                // printf("remove word\n");
+                for(; cmd->commandSize != 0; cmd->commandSize--){
+                    if(cmd->command[cmd->commandSize] == ' '){
+                        break;
+                    } 
+                }
+                cmd->command[cmd->commandSize] = '\0';
+                break;
+        }
+    }
     else if(key == GLFW_KEY_ENTER){
         cmd->active = false;
-        printf("%s\n", cmd->command);
+        // printf("%s\n", cmd->command);
         commandLineExecute(cmd);
         cmd->commandSize = 0;
     }
     else if(key == GLFW_KEY_ESCAPE){
         cmd->commandSize = 0;
         cmd->active = false;
+    }
+}
+
+void characterCallback(GLFWwindow *window, uint32_t codepoint){
+    if((uint32_t)(UINT8_MAX) < codepoint){
+        return;
+    }
+    uint8_t c = codepoint;
+    // printf("%c", c);
+    
+    if(glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS){
+        return;
+    }
+
+    // start command line
+    if(c == '/' && !cmd->active){
+        cmd->active = true;
+        commandLineAdd(cmd, '/');
+    }
+    else if(cmd->active && isprint(c)){
+        // if(isalpha(key)){
+        //     c = tolower(key);
+            // if(c == 'c' && glfwGetKey)(
+        //     if(glfwGetKey(w, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS){
+        //         c = toupper(c);
+        //     }
+        // }
+        commandLineAdd(cmd, c);
+        struct Option *option = commandLineCurrOption(cmd);
+        // printf("option %p\n", option);
+        optionPrint(option, 0);
     }
 }
 

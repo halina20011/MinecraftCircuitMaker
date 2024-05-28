@@ -32,7 +32,7 @@ struct Chunks *chunksInit(){
     return chunks;
 }
 
-void positionToQuadrant(struct Chunks *chunks, BlockPosition position, struct ChunkZVector **quadrant){
+uint8_t positionToQuadrant(struct Chunks *chunks, BlockPosition position, struct ChunkZVector **quadrant){
     float x = position[0], y = position[1];
     bool negative = (position[2] < 0);
     size_t index = 0;
@@ -72,7 +72,7 @@ void positionToQuadrant(struct Chunks *chunks, BlockPosition position, struct Ch
 
 struct Chunk *positionToChunk(struct BlockSupervisor *bs, BlockPosition position){
     struct ChunkZVector *quadrant = NULL;
-    positionToQuadrant(bs->chunks, position, &quadrant);
+    uint8_t quadrantIndex = positionToQuadrant(bs->chunks, position, &quadrant);
 
     int16_t x, y, z;
     // int8_t z = position[2] / CHUNK_HEIGHT;
@@ -91,6 +91,12 @@ struct Chunk *positionToChunk(struct BlockSupervisor *bs, BlockPosition position
 
     struct ChunkXVector *chunkX = chunkY->data[y];
     bool newChunk = chunkX->size <= x;
+
+    // ChunkPosition X, Y, Z;
+    // if(position[0]){
+    //
+    // }
+
     // printf("%zu %o %i\n", chunkX->size, x, newChunk);
     RESIZE_CHUNK(x, chunkX, ChunkXVectorPush, chunkInit, x, y, z);
     if(newChunk){

@@ -8,6 +8,8 @@
 #include <string.h>
 #include <limits.h>
 
+#include <libgen.h> // basename
+
 #define CGLM_DEFINE_PRINTS 1
 #define DEBUG 1
 
@@ -22,8 +24,6 @@
 #include "blocks.h"
 
 #define QUADRANTS_SIZE 8
-
-#define MAX_BLOCK_ID_SIZE UINT8_MAX
 
 #define CHUNK_WIDTH     32
 #define CHUNK_DEPTH     32
@@ -61,20 +61,21 @@ struct BoundingBox{
 };
 
 struct BlockType{
-    BlockId id;
-    char *idStr;
+    BlockTypeId id;
+    BlockTypeIdStr *idStr;
     float *data;
     size_t dataSize;
+
     struct BoundingBox boundingBox;
 };
 
 NEW_VECTOR_TYPE(struct Block*, BlockPVector);
 
 struct Block{
-    uint16_t id;
+    BlockTypeId id;
     BlockPosition position;
-    uint8_t facing;
-    size_t index;
+    BlockRotation facing;
+    BlocksSize index;
 };
 
 // BUILDING_FLIP_HORIZONTAL,
@@ -86,13 +87,28 @@ enum BuildingRotation{
     BUILDING_FLIP_DEPTH
 };
 
-struct Building{
-    uint32_t size;
-    char *name;
-    struct Block **blocks;
+struct BlockBuilding{
+    BlockTypeId id;
+    BlockPosition pos;
+    BlockRotation rot;
 };
 
-NEW_VECTOR_TYPE(struct Building*, BuildingPVector);
+struct BuildingType{
+    BuildingTypeId id;
+    char *name;
+    BuildingPath path;
+    BuildingPathSize pathSize;
+    struct BlockBuilding **blocks;
+    BlockTypesSize size;
+    struct BoundingBox boundingBox;
+};
+
+struct Building{
+    BuildingTypeId id;
+    size_t index;
+};
+
+NEW_VECTOR_TYPE(struct BuildingType*, BuildingTypePVector);
 
 struct Chunk{
     ChunkPosition x, y, z;
@@ -118,15 +134,16 @@ struct BlockSupervisor{
     struct BlockPVector *blocks;
 
     struct BlockType *blockTypes;
-    BlockId *availableBlockTypes;
+    BlockTypeId *availableBlockTypes;
     size_t availableBlockTypesSize;
     char **blockTypesNames;
     size_t *blockTypesHistogram;
 
-    struct ObjectPVector *objects;
+    struct BuildingTypePVector *buildingTypes;
+    struct HistogramVector *buildingTypesHistogram;
 
     struct BuildingPVector *buildings;
-    struct HistogramVector *buildingsHistogram;
+    struct ObjectPVector *objects;
 
     ssize_t *blockDataStartIndex;
     GLuint blocksVBO;
@@ -148,11 +165,18 @@ struct Object{
 };
 
 NEW_VECTOR_TYPE(struct Object*, ObjectPVector);
+NEW_VECTOR_TYPE(struct Building*, BuildingPVector);
 
 struct BlockSupervisor *blockSupervisorInit();
 
+void boundingBoxPrint(struct BoundingBox *bb);
+
+void exportAsBuilding(struct BlockSupervisor *bs, char path[]);
+void exportBlocks(struct BlockSupervisor *bs, FILE *f, bool unwrapp);
+void exportBuildings(struct BlockSupervisor *bs, FILE *f);
+
 // BLOCK
-struct Block *addBlock(struct BlockSupervisor *bs, uint16_t id, BlockPosition pos, uint8_t facing);
+struct Block *addBlock(struct BlockSupervisor *bs, BlockTypeId id, BlockPosition pos, BlockRotation facing);
 void deleteBlock(struct BlockSupervisor *bs, BlockPosition position);
 void drawBlock(struct BlockType blockType);
 void drawBlocks(struct BlockSupervisor *bs, GLint modelUniformLocation, GLint textureUniform);
@@ -161,7 +185,7 @@ bool blockIntersection(struct BlockType *block, vec3 rayOrigin, vec3 rayDirectio
 // BLOCK TYPE
 bool loadBlock(struct BlockSupervisor *bs, const char fileName[], struct BlockType *block);
 char **blockNames();
-uint16_t blockId(struct BlockSupervisor *bs, const char *id);
+BlockTypeId blockId(struct BlockSupervisor *bs, const char *id);
 void blockTypeBoundingBox(struct BoundingBox *bb, float *data, size_t size);
 struct BlockType *loadBlocks(struct BlockSupervisor *bs, bool **set, size_t *rDataSize);
 GLuint loadBlocksTexture(const char textureFile[]);
@@ -170,13 +194,15 @@ GLuint loadBlocksTexture(const char textureFile[]);
 struct Chunk *chunkInit(uint8_t _x, uint8_t _y, uint8_t _z);
 struct Chunks *chunksInit();
 struct Block **blockPositionToChunkGrid(struct BlockSupervisor *bs, BlockPosition position);
-void positionToQuadrant(struct Chunks *chunks, BlockPosition position, struct ChunkZVector **quadrant);
+uint8_t positionToQuadrant(struct Chunks *chunks, BlockPosition position, struct ChunkZVector **quadrant);
 struct Chunk *positionToChunk(struct BlockSupervisor *bs, BlockPosition position);
 void addBlockToChunk(struct Chunk *chunk, struct Block *block);
 void drawChunk(struct Chunk *chunk);
 void drawChunks(struct BlockSupervisor *bs);
 
 // BUILDING
+void buildingAdd(struct BlockSupervisor *bs, BuildingTypeId id);
+void buildingDraw(struct BlockSupervisor *bs, GLint modelUniformLocation);
 void buildingLoadFromDirectory(struct BlockSupervisor *bs, const char directoryPath[]);
 void buildingExport(struct BlockSupervisor *bS, const char fileName[]);
 void buildingLoad(struct BlockSupervisor *bs, const char fileName[]);

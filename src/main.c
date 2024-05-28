@@ -30,9 +30,27 @@ VECTOR_TYPE_FUNCTIONS(float*, Vec3Vector);
 struct Option *optionsInit(){
     char **blockTypeNames = blockNames();
 
-    struct Option *options = optionNew("", NULL, 2,
-        optionNew("use", NULL, 1, optionList(blockTypeNames, BLOCK_TYPES_SIZE, interfaceAddBlock, 0)),
-        optionNew("export", NULL, 1, optionNew("block", NULL, 0))
+    struct Option *options = optionNew("", NULL, 4,
+        optionNew("use", NULL, 1, 
+            optionList(blockTypeNames, BLOCK_TYPES_SIZE, interfaceAddBlock, 0)
+        ),
+        optionNew("export", NULL, 2, 
+            optionNew("building", NULL, 1, 
+                optionArgument(interfaceExportBuilding, 0)
+            ), 
+            optionNew("scene", NULL, 1, 
+                optionArgument(interfaceExportScene, 0)
+            )
+        ),
+        optionNew("load", NULL, 2, 
+            optionNew("building", NULL, 1, 
+                optionArgument(interfaceLoadBuilding, 0)
+            ), 
+            optionNew("scene", NULL, 1, 
+                optionArgument(interfaceLoadScene, 0)
+            )
+        ),
+        optionNew("building", NULL, 2, optionNew("reload", NULL, 0), optionNew("unwrap", NULL, 0))
     );
 
     return options;
@@ -104,6 +122,10 @@ int main(){
     addBlock(blockSupervisor, PISTON, (BlockPosition){1, 0, 0}, NORTH);
     addBlock(blockSupervisor, PISTON, (BlockPosition){3, 0, 0}, UP);
     addBlock(blockSupervisor, PISTON, (BlockPosition){5, 0, 0}, DOWN);
+
+    // interfaceExportBuilding();
+    interfaceLoadBuilding();
+    buildingAdd(blockSupervisor, 0);
 
     // for(int z = 0; z < 10; z++){
     //     for(int y = 0; y < 10; y++){
@@ -290,6 +312,7 @@ int main(){
 
         drawChunks(blockSupervisor);
         drawBlocks(blockSupervisor, modelUniformLocation, textureUniform);
+        buildingDraw(blockSupervisor, modelUniformLocation);
         
         // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 

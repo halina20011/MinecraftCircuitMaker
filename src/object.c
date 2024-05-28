@@ -9,6 +9,7 @@ VECTOR_TYPE_FUNCTIONS(struct ChunkXVector*, ChunkYVector);
 VECTOR_TYPE_FUNCTIONS(struct ChunkYVector*, ChunkZVector);
 
 VECTOR_TYPE_FUNCTIONS(struct Object*, ObjectPVector);
+VECTOR_TYPE_FUNCTIONS(struct Building*, BuildingPVector);
 VECTOR_TYPE_FUNCTIONS(size_t, HistogramVector);
 
 // # BLOCK FILE FORMAT
@@ -26,7 +27,7 @@ struct BlockSupervisor *blockSupervisorInit(){
     bool *set;
     // load all blocks that are in the directory
     struct BlockType *blockTypes = loadBlocks(bs, &set, &dataSize);
-    bs->availableBlockTypes = malloc(sizeof(uint16_t) * BLOCK_TYPES_SIZE);
+    bs->availableBlockTypes = malloc(sizeof(BlockTypeId) * BLOCK_TYPES_SIZE);
 
     // crete a block's type data buffer that will be send to GPU
     // and then later used to draw blocks
@@ -72,8 +73,11 @@ struct BlockSupervisor *blockSupervisorInit(){
     bs->blockTypesHistogram = calloc(BLOCK_TYPES_SIZE, sizeof(size_t));
 
     // init buildings
+    bs->buildingTypes = BuildingTypePVectorInit();
+    bs->buildingTypesHistogram = HistogramVectorInit();
+
     bs->buildings = BuildingPVectorInit();
-    bs->buildingsHistogram = HistogramVectorInit();
+    bs->objects = ObjectPVectorInit();
 
     buildingLoadFromDirectory(bs, BLOCKS_DIR_PATH);
     
@@ -95,4 +99,82 @@ void boundingBoxPrint(struct BoundingBox *bb){
         bb->max[1],
         bb->max[2]
     );
+}
+
+// export options
+//  - building has only blocks, all buildings are unwrapped
+//  - scene can have blocks and buildings
+
+void exportAsBuilding(struct BlockSupervisor *bs, char pat[]){
+    const char path[] = "/tmp/build";
+    // char *buildingName = basename(path);
+    // BuildingPathSize buildingNameSize = strlen(buildingName);
+    // if(!buildingName){
+    //     fprintf(stderr, "failed to get building name from path '%s'\n", path);
+    //     return;
+    // }
+
+    FILE *f = fopen(path, "wb");
+    if(!f){
+        fprintf(stderr, "failed to open file '%s'\n", path);
+        return;
+    }
+
+    // fwrite(&buildingNameSize, sizeof(BuildingPathSize), 1, f);
+    // fwrite(buildingName, sizeof(BuildingPath), 1, f);
+    exportBlocks(bs, f, true);
+
+    printf("exported succesfully\n");
+    fclose(f);
+}
+
+void exportBlocks(struct BlockSupervisor *bs, FILE *f, bool unwrapp){
+    // loop throw all block types and figure out which one are being used
+    BlockTypeId blockTypesSize = 0;
+    for(size_t i = 0; i < BLOCK_TYPES_SIZE; i++){
+        if(bs->blockTypesHistogram[i]){
+            blockTypesSize++;
+        }
+    }
+
+    BlockTypeId *blockTypesRemap = malloc(sizeof(BlockTypesSize) * BLOCK_TYPES_SIZE);
+    printf("number of blockTypes %i\n", blockTypesSize);
+    
+    // export the number of blockTypes
+    fwrite(&blockTypesSize, sizeof(BlockTypesSize), 1, f);
+
+    BlockTypeId blockTypesRemapSize = 0;
+    // export each used block type
+    for(size_t i = 0; i < BLOCK_TYPES_SIZE; i++){
+        if(bs->blockTypesHistogram[i]){
+            struct BlockType *blockType = &bs->blockTypes[i];
+            printf("%s block used\n", blockType->idStr);
+            uint8_t idStrSize = strlen(blockType->idStr);
+            // export
+            fwrite(&idStrSize, sizeof(BlockTypeIdStrSize), 1, f);
+            fwrite(blockType->idStr, sizeof(BlockTypeIdStr), idStrSize, f);
+            blockTypesRemap[i] = blockTypesRemapSize++;
+        }
+    }
+
+    // export each block
+    BlocksSize numberOfBlocks = bs->blocks->size;
+    printf("number of blocks %i\n", numberOfBlocks);
+    fwrite(&numberOfBlocks, sizeof(BlocksSize), 1, f);
+    for(size_t i = 0; i < numberOfBlocks; i++){
+        struct Block *block = bs->blocks->data[i];
+        // struct Block *block = b->object;
+
+        // export block
+        BlockTypeId id = blockTypesRemap[block->id];
+        fwrite(&id, sizeof(BlockTypeId), 1, f);
+        fwrite(&block->position, sizeof(BlockPosition), 1, f);
+        fwrite(&block->facing, sizeof(BlockRotation), 1, f);
+        printf("block id %i => %i\n", block->id, id);
+    }
+    printf("end blocks\n");
+}
+
+void exportBuildings(struct BlockSupervisor *bs, FILE *f){
+
 }

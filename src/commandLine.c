@@ -1,6 +1,8 @@
 #include "commandLine.h"
 
-extern struct Text *text;
+#include "interface.h"
+
+extern struct Interface *interface;
 
 size_t commandLineDepth(struct Option *option){
     if(option){
@@ -38,20 +40,25 @@ struct CommandLine *commandLineInit(struct Option *rootOption){
     return cmd;
 }
 
+#define ADD_OPTIONS() do{\
+    option->options = malloc(sizeof(struct Option) * size);\
+    option->optionsSize = size;\
+    va_list va;\
+    va_start(va, size);\
+    for(size_t i = 0; i < size; i++){\
+        option->options[i] = va_arg(va, struct Option*);\
+    }\
+    va_end(va);\
+}while(0)
+
 struct Option *optionNew(const char name[], void *function, size_t size, ...){
     struct Option *option = malloc(sizeof(struct Option));
     option->name = strdup(name);
     option->names = NULL;
     option->type = OPTION_SINGLE;
-    option->options = malloc(sizeof(struct Option) * size);
-    option->optionsSize = size;
 
-    va_list va;
-    va_start(va, size);
-    for(size_t i = 0; i < size; i++){
-        option->options[i] = va_arg(va, struct Option*);
-    }
-    va_end(va);
+    ADD_OPTIONS();
+
     option->function = function;
 
     return option;
@@ -63,15 +70,22 @@ struct Option *optionList(char **list, size_t listSize, void *function, size_t s
     option->names = list;
     option->namesSize = listSize;
     option->type = OPTION_MULTY;
-    option->options = malloc(sizeof(struct Option) * size);
-    option->optionsSize = size;
 
-    va_list va;
-    va_start(va, size);
-    for(size_t i = 0; i < size; i++){
-        option->options[i] = va_arg(va, struct Option*);
-    }
-    va_end(va);
+    ADD_OPTIONS();
+
+    option->function = function;
+
+    return option;
+}
+
+struct Option *optionArgument(void *function, size_t size, ...){
+    struct Option *option = malloc(sizeof(struct Option));
+    option->name = NULL;
+    option->names = NULL;
+    option->namesSize = 0;
+    option->type = OPTION_ARGUMENT;
+
+    ADD_OPTIONS();
 
     option->function = function;
 
@@ -85,25 +99,47 @@ void optionPrint(struct Option *option, uint8_t level){
 
     for(size_t i = 0; i < option->optionsSize; i++){
         struct Option *curr = option->options[i];
-        for(uint8_t i = 0; i < level; i++){
+        for(uint8_t j = 0; j < level; j++){
             printf("│   ");
         }
         if(curr->type == OPTION_SINGLE){
             printf("├── %s\n", curr->name);
         }
-        else{
+        else if(curr->type == OPTION_MULTY){
             printf("├── ");
             for(size_t j = 0; j < curr->namesSize; j++){
                 printf("%s,", curr->names[j]);
             }
             printf("\n");
         }
+        else{
+            printf("├── [ARGUMENT]\n");
+        }
         optionPrint(curr, level + 1);
     }
 }
 
 void commandLineDraw(struct CommandLine *cmd, GLint modelUniformLocation, GLint colorUniform){
-    textDrawOnScreen(text, cmd->command, -1, -1.0f + 0.02f, modelUniformLocation);
+    float endPos = textDrawOnScreen(interface->text, cmd->command, -1, -1.0f + 0.02f, modelUniformLocation);
+    char *end = "|";
+    textDrawOnScreen(interface->text, end, -1.0f + endPos, -1.0f + 0.02f, modelUniformLocation);
+}
+
+void commandLinePaste(struct CommandLine *cmd){
+    const char *clipboardText = glfwGetClipboardString(interface->g->window);
+    if(!clipboardText){
+        return;
+    }
+    // printf("clip content %s", clipboardText);
+    for(size_t i = 0; clipboardText[i] && cmd->commandSize < COMMAND_MAX_SIZE; i++){
+        cmd->command[cmd->commandSize++] = clipboardText[i];
+    }
+    cmd->command[cmd->commandSize] = '\0';
+}
+
+void commandLineCopy(struct CommandLine *cmd, struct GLFWwindow *w){
+    char *c = &cmd->command[1];
+    glfwSetClipboardString(w, c);
 }
 
 void commandSugestion(struct CommandLine *cmd, struct Option *o, bool *valid){
@@ -128,13 +164,15 @@ struct Option *commandLineCurrOption(struct CommandLine *cmd){
         size_t size = countSize(command);
         found = false;
         if(size == 0){
-            printf("no more characters, end");
+            printf("no more characters, end\n");
             cmd->matchSize = matchSize;
             return curr;
         }
 
         printf("curr word size %zu\n", size);
         printf("- curr option '%s' has %zu options\n", curr->name, curr->optionsSize);
+        bool argument = false;
+        struct Option *argOption;
         for(size_t i = 0; i < curr->optionsSize && !found; i++){
             struct Option *currOption = curr->options[i];
             if(currOption->type == OPTION_SINGLE){
@@ -147,7 +185,7 @@ struct Option *commandLineCurrOption(struct CommandLine *cmd){
                     cmd->optionsIndicies[matchSize++] = i;
                 }
             }
-            else{
+            else if(currOption->type == OPTION_MULTY){
                 for(size_t o = 0; o < currOption->namesSize && !found; o++){
                     size_t sSize = strlen(currOption->names[o]);
                     printf("trying '%s' == '%s'\n", currOption->names[o], command);
@@ -160,15 +198,25 @@ struct Option *commandLineCurrOption(struct CommandLine *cmd){
                     }
                 }
             }
+            else{
+                argument = true;
+                argOption = currOption;
+            }
         }
         
-        if(!found){
+        if(!found && !argument){
             printf("not found\n");
             cmd->matchSize = 0;
             return NULL;
         }
         else{
-            bool space = command[size] == ' ';
+            // argument match
+            if(argument && !found){
+                cmd->optionsIndicies[matchSize++] = command - &cmd->command[1] + 1;
+                printf("matched argument with size %zu\n", size);
+                curr = argOption;
+            }
+            bool space = (command[size] == ' ');
             command = &command[size + space];
         }
     }

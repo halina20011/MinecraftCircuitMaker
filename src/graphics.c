@@ -17,6 +17,14 @@ void drawLine(float x1, float y1, float z1, float x2, float y2, float z2){
     glDrawArrays(GL_LINES, 0, 2);
 }
 
+// void drawLineWeight(float x1, float y1, float z1, float x2, float y2, float z2){
+//     vec3 start = {x1, y1, z1};
+//     vec3 end = {x2, y2, z2};
+//
+//     vec3 startDir = {};
+//     glm_vec3_sub(start, end, startDir);
+// }
+
 void drawLineVec(vec3 start, vec3 end){
     float line[] = {
         start[0], start[1], start[2], 0, 0,
@@ -103,6 +111,7 @@ struct Graphics *graphicsInit(){
     glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
 
     glfwSetKeyCallback(window, keyCallback);
+    glfwSetCharCallback(window, characterCallback);
     glfwSetCursorPosCallback(window, cursorPosCallback);
     glfwSetScrollCallback(window, scrollCallback);
     glfwSetMouseButtonCallback(window, mouseButtonCallback);
