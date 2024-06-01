@@ -17,13 +17,78 @@ void drawLine(float x1, float y1, float z1, float x2, float y2, float z2){
     glDrawArrays(GL_LINES, 0, 2);
 }
 
-// void drawLineWeight(float x1, float y1, float z1, float x2, float y2, float z2){
-//     vec3 start = {x1, y1, z1};
-//     vec3 end = {x2, y2, z2};
-//
-//     vec3 startDir = {};
-//     glm_vec3_sub(start, end, startDir);
-// }
+void drawLineWeight(vec3 p1, vec3 p2, vec3 pos, float rotation, GLuint arrayBuffer, GLuint elementArrayBuffer, GLuint modelUniformLocation){
+    // A ------ B
+    // |   |    |
+    // |---+----|
+    // |   |    |
+    // D------- C
+    float s = 0.005;
+    // float s = 0.05;
+    float d = glm_vec3_distance(p1, p2);
+    float points[] = {
+        - s, + s, 0, 0, 0, // A
+        + s, + s, 0, 0, 0, // B
+        + s, - s, 0, 0, 0, // C
+        - s, - s, 0, 0, 0, // D
+        - s, + s, 0 - d, 0, 0, // A2
+        + s, + s, 0 - d, 0, 0, // B2
+        + s, - s, 0 - d, 0, 0, // C2
+        - s, - s, 0 - d, 0, 0, // D2
+    };
+
+    vec3 dir = {};
+    glm_vec3_sub(p2, p1, dir);
+    glm_vec3_normalize(dir);
+
+    mat4 mat;
+    glm_mat4_identity(mat);
+
+    // glm_translate(mat, p1);
+    if(dir[0] == 0 && dir[2] == 0){
+        glm_look(p1, dir, (vec3){1, 0, 0}, mat);
+        // glm_look((vec3){0, 0, 0}, dir, (vec3){1, 0, 0}, mat);
+    }
+    else{
+        // glm_look((vec3){0, 0, 0}, dir, (vec3){0, 1, 0}, mat);
+        glm_look(p1, dir, (vec3){0, 1, 0}, mat);
+    }
+    
+    glm_rotate_at(mat, pos, rotation, (vec3){0, 1, 0});
+    glm_mat4_inv(mat, mat);
+    // glm_translate(mat, pos);
+    // glm_rotate_at(mat, (vec3){0, 0, 0}, rotation, (vec3){0, 1, 0});
+
+    // glm_look(p1, dir, (vec3){0, 1, 0}, mat);
+    // glm_scale(mat, (vec3){d, d, d});
+    // glm_translate(mat, p1);
+
+    glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)mat);
+
+    glBindBuffer(GL_ARRAY_BUFFER, arrayBuffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(points), points, GL_DYNAMIC_DRAW);
+
+    GLubyte indices[] = {
+        0, 1, 2, // start 
+        0, 2, 3, // 
+        4, 5, 6, // end
+        4, 6, 7,
+        // ------
+        0, 4, 
+        1, 5, 
+        2, 6, 
+        3, 7, 
+        0, 4
+    };
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementArrayBuffer);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_DYNAMIC_DRAW);
+
+    // glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_BYTE, NULL);
+    // glDrawElements(GL_TRIANGLE_STRIP, 10, GL_UNSIGNED_BYTE, NULL);
+    glDrawRangeElements(GL_TRIANGLES, 0, 12, 12, GL_UNSIGNED_BYTE, (void*)0);
+    glDrawRangeElements(GL_TRIANGLE_STRIP, 12, 22, 10, GL_UNSIGNED_BYTE, (void*)(12 * sizeof(GLbyte)));
+}
 
 void drawLineVec(vec3 start, vec3 end){
     float line[] = {

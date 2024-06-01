@@ -6,6 +6,9 @@ camera: <https://cglm.readthedocs.io/en/latest/cam.html> </br>
 mat4: <https://cglm.readthedocs.io/en/latest/mat4.html> </br>
 vec3: <https://cglm.readthedocs.io/en/latest/mat3.html> </br>
 
+### Opengl
+https://www.khronos.org/opengl/wiki/Vertex_Specification#Vertex_Buffer_Object <br>
+
 ### Floorplanning chip design
 <http://vlsicad.eecs.umich.edu/KLMH/downloads/book/chapter3/chap3-orig.pdf>
 

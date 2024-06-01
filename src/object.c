@@ -1,4 +1,5 @@
 #include "object.h"
+#include "graphics.h"
 
 VECTOR_TYPE_FUNCTIONS(struct Block*, BlockPVector);
 
@@ -20,8 +21,9 @@ VECTOR_TYPE_FUNCTIONS(size_t, HistogramVector);
 // texture size (uint32_t)
 // texture data (float)
 
-struct BlockSupervisor *blockSupervisorInit(){
+struct BlockSupervisor *blockSupervisorInit(struct Shader *shader, GLint modelUniformLocatio){
     struct BlockSupervisor *bs = malloc(sizeof(struct BlockSupervisor));
+
     bs->blockTypesNames = blockNames();
     size_t dataSize = 0;
     bool *set;
@@ -45,7 +47,7 @@ struct BlockSupervisor *blockSupervisorInit(){
             size_t startIndex = dataSizeEnd;
             blockDataStartIndex[i] = startIndex;
             printf("%zu %zu %zu\n", startIndex, dataSize, blockType->dataSize);
-            memcpy(&modelsData[startIndex], blockType->data, blockType->dataSize);
+            memcpy(&modelsData[startIndex], blockType->data, sizeof(float) * blockType->dataSize);
             dataSizeEnd += blockType->dataSize;
             bs->availableBlockTypes[index++] = i;
         }
@@ -55,13 +57,25 @@ struct BlockSupervisor *blockSupervisorInit(){
     }
     bs->availableBlockTypesSize = index;
 
-    // glGenBuffers(1, &bs->blocksVBO);
-    // glBindBuffer(GL_ARRAY_BUFFER, bs->blocksVBO);
+    glGenVertexArrays(1, &bs->vao);
+    glBindVertexArray(bs->vao);
+    glGenBuffers(1, &bs->blocksVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, bs->blocksVBO);
+
+    bs->modelUniformLocatio = modelUniformLocatio;
     // printf("dataSize: %zu\n", dataSize);
-    
+
+    GLint posAttrib = glGetAttribLocation(shader->program, "position");
+    glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 5, 0);
+    GLint textAttrib = glGetAttribLocation(shader->program, "texture");
+    glVertexAttribPointer(textAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (void*)(sizeof(float) * 3));
+    glEnableVertexAttribArray(posAttrib);
+    glEnableVertexAttribArray(textAttrib);
+
+    glDisable(GL_CULL_FACE);
     // send the data to GPU and free the buffer
-    // glBufferData(GL_ARRAY_BUFFER, sizeof(float) * dataSize, modelsData, GL_STATIC_DRAW);
-    // free(modelsData);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * dataSize, modelsData, GL_STATIC_DRAW);
+    free(modelsData);
 
     // load blocks textures
     bs->blocksTexture = loadBlocksTexture("Assets/texture.bin");
@@ -79,7 +93,7 @@ struct BlockSupervisor *blockSupervisorInit(){
     bs->buildings = BuildingPVectorInit();
     bs->objects = ObjectPVectorInit();
 
-    buildingLoadFromDirectory(bs, BLOCKS_DIR_PATH);
+    buildingLoadFromDirectory(bs, BUILDINGS_DIR_PATH);
     
     // load
     bs->chunks = chunksInit();
@@ -87,6 +101,10 @@ struct BlockSupervisor *blockSupervisorInit(){
     bs->blocks = BlockPVectorInit();
 
     return bs;
+}
+
+void printVec3(vec3 v){
+    printf("%f %f %f\n", v[0], v[1], v[2]);
 }
 
 void boundingBoxPrint(struct BoundingBox *bb){
@@ -99,6 +117,101 @@ void boundingBoxPrint(struct BoundingBox *bb){
         bb->max[1],
         bb->max[2]
     );
+}
+
+float facingToRad(BlockRotation facing){
+    switch(facing){
+        case EAST:
+            return 0;
+        case SOUTH:
+            return -90;
+        case WEST:
+            return 180;
+        case NORTH:
+            return 90;
+    }
+
+    return 0;
+}
+
+void boundingBoxDraw(struct BoundingBox *bb, BlockPosition pos, BlockRotation facing, GLuint arrayBuffer, GLuint elementArrayBuffer, GLuint modelUniformLocation){
+    vec3 a1 = {bb->min[0] + pos[0], bb->min[1] + pos[1], bb->min[2] + pos[2]};
+    vec3 b1 = {bb->max[0] + pos[0], bb->min[1] + pos[1], bb->min[2] + pos[2]};
+    vec3 c1 = {bb->max[0] + pos[0], bb->min[1] + pos[1], bb->max[2] + pos[2]};
+    vec3 d1 = {bb->min[0] + pos[0], bb->min[1] + pos[1], bb->max[2] + pos[2]};
+
+    vec3 a2 = {bb->min[0] + pos[0], bb->max[1] + pos[1], bb->min[2] + pos[2]};
+    vec3 b2 = {bb->max[0] + pos[0], bb->max[1] + pos[1], bb->min[2] + pos[2]};
+    vec3 c2 = {bb->max[0] + pos[0], bb->max[1] + pos[1], bb->max[2] + pos[2]};
+    vec3 d2 = {bb->min[0] + pos[0], bb->max[1] + pos[1], bb->max[2] + pos[2]};
+
+    vec3 offset = {pos[0], pos[1], pos[2]};
+    float rot = glm_rad(facingToRad(facing));
+
+    // drawLineWeight(a, b, arrayBuffer, elementArrayBuffer, modelUniformLocation);
+    drawLineWeight(a1, b1, offset, rot, arrayBuffer, elementArrayBuffer, modelUniformLocation);
+    drawLineWeight(b1, c1, offset, rot, arrayBuffer, elementArrayBuffer, modelUniformLocation);
+    drawLineWeight(c1, d1, offset, rot, arrayBuffer, elementArrayBuffer, modelUniformLocation);
+    drawLineWeight(d1, a1, offset, rot, arrayBuffer, elementArrayBuffer, modelUniformLocation);
+    
+    drawLineWeight(a2, b2, offset, rot, arrayBuffer, elementArrayBuffer, modelUniformLocation);
+    drawLineWeight(b2, c2, offset, rot, arrayBuffer, elementArrayBuffer, modelUniformLocation);
+    drawLineWeight(c2, d2, offset, rot, arrayBuffer, elementArrayBuffer, modelUniformLocation);
+    drawLineWeight(d2, a2, offset, rot, arrayBuffer, elementArrayBuffer, modelUniformLocation);
+    
+    drawLineWeight(a1, a2, offset, rot, arrayBuffer, elementArrayBuffer, modelUniformLocation);
+    drawLineWeight(b1, b2, offset, rot, arrayBuffer, elementArrayBuffer, modelUniformLocation);
+    drawLineWeight(c1, c2, offset, rot, arrayBuffer, elementArrayBuffer, modelUniformLocation);
+    drawLineWeight(d1, d2, offset, rot, arrayBuffer, elementArrayBuffer, modelUniformLocation);
+
+    drawLineWeight(b1, c2, offset, rot, arrayBuffer, elementArrayBuffer, modelUniformLocation);
+    drawLineWeight(c1, b2, offset, rot, arrayBuffer, elementArrayBuffer, modelUniformLocation);
+}
+
+#define INTERSECTION(axisIndex){ \
+    vec3 axis = {modelMatrix[axisIndex][0], modelMatrix[axisIndex][1], modelMatrix[axisIndex][2]};\
+    float e = glm_vec3_dot(axis, delta); \
+    float f = glm_vec3_dot(rayDirection, axis); \
+    if(0.001f < fabs(f)){\
+        float t1 = (e + bb->min[axisIndex]) / f;\
+        float t2 = (e + bb->max[axisIndex]) / f;\
+        if(t2 < t1){\
+            float t = t1;\
+            t1 = t2;\
+            t2 = t;\
+        }\
+        if(t2 < tMax){\
+            tMax = t2;\
+        }\
+        if(tMin < t1){\
+            tMin = t1;\
+            *intersectionAxis = axisIndex;\
+        }\
+        if(tMax < tMin){\
+            return false;\
+        }\
+    }\
+    else{\
+        if(0.0f < -e + bb->min[axisIndex] || -e + bb->max[axisIndex] < 0.0f){\
+            return false;\
+        }\
+    }\
+}
+
+bool boundingBoxIntersection(struct BoundingBox *bb, vec3 rayOrigin, vec3 rayDirection, mat4 modelMatrix, float *r, uint8_t *intersectionAxis){
+    vec3 obbPos = {modelMatrix[3][0], modelMatrix[3][1], modelMatrix[3][2]};
+    vec3 delta = {};
+    glm_vec3_sub(obbPos, rayOrigin, delta);
+
+    float tMin = 0.0f;
+    float tMax = 1000.0f;
+
+    INTERSECTION(0);
+    INTERSECTION(1);
+    INTERSECTION(2);
+
+    *r = tMin;
+    return true;
 }
 
 // export options

@@ -55,6 +55,7 @@ struct Graphics *graphicsInit();
 void graphicsAddCameras(struct Graphics *g, struct Camera **cams, size_t size);
 
 void drawLine(float x1, float y1, float z1, float x2, float y2, float z2);
+void drawLineWeight(vec3 p1, vec3 p2, vec3 pos, float rotation, GLuint arrayBuffer, GLuint elementArrayBuffer, GLuint modelUniformLocation);
 void drawLineVec(vec3 start, vec3 end);
 void drawLineDirection(vec3 pos, vec3 relDirection);
 void drawDirection(vec3 start, vec3 end, float size);

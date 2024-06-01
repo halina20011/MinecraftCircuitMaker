@@ -41,8 +41,8 @@
 enum BLOCK_STATES{
     // facing
     EAST,
-    NORTH,
     SOUTH,
+    NORTH,
     WEST,
     UP,
     DOWN,
@@ -90,7 +90,7 @@ enum BuildingRotation{
 struct BlockBuilding{
     BlockTypeId id;
     BlockPosition pos;
-    BlockRotation rot;
+    BlockRotation facing;
 };
 
 struct BuildingType{
@@ -106,6 +106,8 @@ struct BuildingType{
 struct Building{
     BuildingTypeId id;
     size_t index;
+    BlockPosition position;
+    BlockRotation facing;
 };
 
 NEW_VECTOR_TYPE(struct BuildingType*, BuildingTypePVector);
@@ -146,6 +148,8 @@ struct BlockSupervisor{
     struct ObjectPVector *objects;
 
     ssize_t *blockDataStartIndex;
+    GLint modelUniformLocatio;
+    GLuint vao;
     GLuint blocksVBO;
     GLuint blocksTexture;
 };
@@ -167,9 +171,13 @@ struct Object{
 NEW_VECTOR_TYPE(struct Object*, ObjectPVector);
 NEW_VECTOR_TYPE(struct Building*, BuildingPVector);
 
-struct BlockSupervisor *blockSupervisorInit();
+struct BlockSupervisor *blockSupervisorInit(struct Shader *shader, GLint modelUniformLocatio);
 
+bool boundingBoxIntersection(struct BoundingBox *bb, vec3 rayOrigin, vec3 rayDirection, mat4 modelMatrix, float *r, uint8_t *intersectionAxis);
 void boundingBoxPrint(struct BoundingBox *bb);
+void boundingBoxDraw(struct BoundingBox *bb, BlockPosition pos, BlockRotation facing, GLuint arrayBuffer, GLuint elementArrayBuffer, GLuint modelUniformLocation);
+
+float facingToRad(BlockRotation facing);
 
 void exportAsBuilding(struct BlockSupervisor *bs, char path[]);
 void exportBlocks(struct BlockSupervisor *bs, FILE *f, bool unwrapp);
@@ -177,10 +185,8 @@ void exportBuildings(struct BlockSupervisor *bs, FILE *f);
 
 // BLOCK
 struct Block *addBlock(struct BlockSupervisor *bs, BlockTypeId id, BlockPosition pos, BlockRotation facing);
-void deleteBlock(struct BlockSupervisor *bs, BlockPosition position);
-void drawBlock(struct BlockType blockType);
-void drawBlocks(struct BlockSupervisor *bs, GLint modelUniformLocation, GLint textureUniform);
-bool blockIntersection(struct BlockType *block, vec3 rayOrigin, vec3 rayDirection, mat4 modelMatrix, float *r, uint8_t *intersectionAxis);
+void blockDelete(struct BlockSupervisor *bs, BlockPosition position);
+void drawBlocks(struct BlockSupervisor *bs);
 
 // BLOCK TYPE
 bool loadBlock(struct BlockSupervisor *bs, const char fileName[], struct BlockType *block);
@@ -201,8 +207,9 @@ void drawChunk(struct Chunk *chunk);
 void drawChunks(struct BlockSupervisor *bs);
 
 // BUILDING
-void buildingAdd(struct BlockSupervisor *bs, BuildingTypeId id);
-void buildingDraw(struct BlockSupervisor *bs, GLint modelUniformLocation);
+void buildingAdd(struct BlockSupervisor *bs, BuildingTypeId id, BlockPosition pos, BlockRotation facing);
+void buildingDelete(struct BlockSupervisor *bs, struct Building *building);
+void buildingDraw(struct BlockSupervisor *bs);
 void buildingLoadFromDirectory(struct BlockSupervisor *bs, const char directoryPath[]);
 void buildingExport(struct BlockSupervisor *bS, const char fileName[]);
 void buildingLoad(struct BlockSupervisor *bs, const char fileName[]);

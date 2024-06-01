@@ -61,6 +61,20 @@ void processInput(){
     }
 }
 
+#define UPDATE_CURRENT(index, size){\
+    if(key == GLFW_KEY_DOWN){\
+        if(index == 0){\
+            index = size - 1;\
+        }\
+        else{\
+            interface->currBlockIndex--;\
+        }\
+    }\
+    else if(key == GLFW_KEY_UP){\
+        index = (index + 1) % size;\
+    }\
+}
+
 void keyCallback(GLFWwindow *w, int key, int scancode, int action, int mods){
     UNUSED(w);
     UNUSED(scancode);
@@ -76,16 +90,15 @@ void keyCallback(GLFWwindow *w, int key, int scancode, int action, int mods){
     }
 
     // switch block type
-    if(key == GLFW_KEY_DOWN){
-        if(interface->currBlockIndex == 0){
-            interface->currBlockIndex = interface->bs->availableBlockTypesSize - 1;
-        }
-        else{
-            interface->currBlockIndex--;
-        }
+    if(interface->blockIsActive){
+        UPDATE_CURRENT(interface->currBlockIndex, interface->bs->availableBlockTypesSize);
     }
-    else if(key == GLFW_KEY_UP){
-        interface->currBlockIndex = (interface->currBlockIndex + 1) % interface->bs->availableBlockTypesSize;
+    else if(interface->bs->buildingTypes->size){
+        UPDATE_CURRENT(interface->currBuildingIndex, interface->bs->buildingTypes->size);
+    }
+
+    if(key == GLFW_KEY_LEFT || key == GLFW_KEY_RIGHT){
+        interface->blockIsActive = !interface->blockIsActive;
     }
 
     if(!cmd->active){
@@ -140,6 +153,17 @@ void characterCallback(GLFWwindow *window, uint32_t codepoint){
     
     if(glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS){
         return;
+    }
+
+    if(!cmd->active && glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS){
+        interface->facing++;
+        if(interface->facing == 4){
+            interface->facing = 0;
+        }
+    }
+
+    if(!cmd->active && '1' <= codepoint && codepoint <= '6'){
+        interface->rotate = c - '0';
     }
 
     // start command line

@@ -6,71 +6,85 @@ void buildingReload(struct Building *building){
 
 }
 
-void buildingDraw(struct BlockSupervisor *bs, GLint modelUniformLocation){
+void buildingDraw(struct BlockSupervisor *bs){
     struct BuildingPVector *buildings = bs->buildings;
-    printf("size %zu\n", buildings->size);
+    // printf("size %zu\n", buildings->size);
     for(size_t i = 0; i < buildings->size; i++){
-        struct BuildingType *bt = bs->buildingTypes->data[buildings->data[i]->id];
-        printf("size %i\n", bt->size);
+        struct Building *b = buildings->data[i];
+        struct BuildingType *bt = bs->buildingTypes->data[b->id];
+
+        vec3 buildingPos = {b->position[0], b->position[1], b->position[2]};
         for(size_t j = 0; j < bt->size; j++){
             struct BlockBuilding *bb = bt->blocks[j];
             struct BlockType *blockType = &(bs->blockTypes[bb->id]);
-            if(bs->blockDataStartIndex[blockType->id] == -1){
-                printf("invalid\n");
-                continue;
-            }
 
             mat4 model;
             glm_mat4_identity(model);
-            printf("drawing %zu %s\n", j, blockType->idStr);
             
-            vec3 pos = {bb->pos[0], bb->pos[1], bb->pos[2]};
-            vec3 f = {};
-            printf("%i %i %i\n", bb->pos[0], bb->pos[1], bb->pos[2]);
-            glm_vec3_add(pos, (vec3){0, 0, 10}, f);
-            glm_translate(model, f);
-            // vec3 rotation = {};
-            // switch(block->facing){
-            //     case EAST:
-            //         break;
-            //     case SOUTH:
-            //         rotation[1] = -90;
-            //         break;
-            //     case WEST:
-            //         rotation[1] = 180;
-            //         break;
-            //     case NORTH:
-            //         rotation[1] = 90;
-            //         break;
-            //
-            //     case UP:
-            //         rotation[2] = 90;
-            //         break;
-            //     case DOWN:
-            //         rotation[2] = -90;
-            //         break;
-            // }
-            //
-            // glm_rotate_y(model, glm_rad(rotation[1]), model);
-            // glm_rotate_z(model, glm_rad(rotation[2]), model);
-            glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)model);
+            vec3 blockPosition = {bb->pos[0], bb->pos[1], bb->pos[2]};
+            glm_rotate_at(model, buildingPos, glm_rad(facingToRad(b->facing)), (vec3){0, 1, 0});
+            glm_translate(model, buildingPos);
+            glm_translate(model, blockPosition);
 
+            vec3 rotation = {};
+            switch(bb->facing){
+                case EAST:
+                    break;
+                case SOUTH:
+                    rotation[1] = -90;
+                    break;
+                case WEST:
+                    rotation[1] = 180;
+                    break;
+                case NORTH:
+                    rotation[1] = 90;
+                    break;
+
+                case UP:
+                    rotation[2] = 90;
+                    break;
+                case DOWN:
+                    rotation[2] = -90;
+                    break;
+            }
+            glm_rotate_y(model, glm_rad(rotation[1]), model);
+            glm_rotate_z(model, glm_rad(rotation[2]), model);
+
+            glUniformMatrix4fv(bs->modelUniformLocatio, 1, GL_FALSE, (float*)model);
+            
             size_t trigCount = blockType->dataSize / 5;
-            glBufferData(GL_ARRAY_BUFFER, sizeof(float) * blockType->dataSize, blockType->data, GL_STATIC_DRAW);
-            glDrawArrays(GL_TRIANGLES, 0, trigCount);
+            GLint index = bs->blockDataStartIndex[blockType->id] / 5;
+
+            glDrawArrays(GL_TRIANGLES, index, trigCount);
         }
     }
 }
 
-void buildingAdd(struct BlockSupervisor *bs, BuildingTypeId id){
+void buildingAdd(struct BlockSupervisor *bs, BuildingTypeId id, BlockPosition pos, BlockRotation facing){
     struct Building *b = malloc(sizeof(struct Building));
     b->id = 0;
     b->index = bs->buildings->size;
+    b->position[0] = pos[0];
+    b->position[1] = pos[1];
+    b->position[2] = pos[2];
+    b->facing = facing;
     BuildingPVectorPush(bs->buildings, b);
 }
 
-void buildingLoad(struct BlockSupervisor *bs, const char _fileName[]){
-    const char fileName[] = "/tmp/build";
+void buildingDelete(struct BlockSupervisor *bs, struct Building *building){
+    // swap the building with the last one if needed
+    if(bs->buildings->size != 1){
+        struct Building *lastBuild = bs->buildings->data[bs->buildings->size - 1];
+        lastBuild->index = building->index;
+        bs->buildings->data[lastBuild->index] = lastBuild;
+    }
+
+    bs->buildings->size--;
+    // printf("freeing block %p\n", block);
+    free(building);
+}
+
+void buildingLoad(struct BlockSupervisor *bs, const char fileName[]){
     FILE *f = fopen(fileName, "r");
     if(!f){
         fprintf(stderr, "failed to open building");
@@ -129,7 +143,7 @@ void buildingLoad(struct BlockSupervisor *bs, const char _fileName[]){
         printf("block %i id %i, pos %i %i %i, rot %i\n", i, id, pos[0], pos[1], pos[2], rot);
         struct BlockBuilding *bb = malloc(sizeof(struct BlockBuilding));
         bb->id = blockTypesRemap[id];
-        bb->rot = rot;
+        bb->facing = rot;
         bb->pos[0] = pos[0];
         bb->pos[1] = pos[1];
         bb->pos[2] = pos[2];
@@ -143,9 +157,17 @@ void buildingLoad(struct BlockSupervisor *bs, const char _fileName[]){
         building->boundingBox.max[2] = MAX(pos[2], building->boundingBox.max[2]);
     }
 
-    boundingBoxPrint(&building->boundingBox);
     building->blocks = blocks;
     building->size = blocksSize;
+
+    building->boundingBox.min[0] -= 0.5; 
+    building->boundingBox.min[1] -= 0.5; 
+    building->boundingBox.min[2] -= 0.5; 
+
+    building->boundingBox.max[0] += 0.5; 
+    building->boundingBox.max[1] += 0.5; 
+    building->boundingBox.max[2] += 0.5; 
+    boundingBoxPrint(&building->boundingBox);
 
     // save the path of the building file
     BuildingPathSize pathSize;
@@ -154,6 +176,7 @@ void buildingLoad(struct BlockSupervisor *bs, const char _fileName[]){
 
     char *name = basename((char*)path);
     printf("building name %s\n", name);
+    building->name = name;
 
     building->path = path;
 
@@ -163,7 +186,7 @@ void buildingLoad(struct BlockSupervisor *bs, const char _fileName[]){
 void buildingLoadFromDirectory(struct BlockSupervisor *bs, const char directoryPath[]){
     DIR *d = opendir(directoryPath);
     if(!d){
-        fprintf(stderr, "failed to open dir: %s\n", BLOCKS_DIR_PATH);
+        fprintf(stderr, "failed to open dir: %s\n", directoryPath);
         exit(1);
     }
 
@@ -171,7 +194,7 @@ void buildingLoadFromDirectory(struct BlockSupervisor *bs, const char directoryP
     while((dir = readdir(d)) != NULL){
         if(dir->d_type != DT_DIR){
             char filePath[255];
-            strcpy(filePath, BLOCKS_DIR_PATH);
+            strcpy(filePath, directoryPath);
             strcat(filePath, "/");
             strcat(filePath, dir->d_name);
             buildingLoad(bs, filePath);

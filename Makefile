@@ -1,7 +1,9 @@
 CC = gcc
 
 BLOCKS_DIR_NAME = "./Assets/Blocks/"
+BUILDINGS_DIR_NAME = "./Assets/Buildings/"
 BLOCKS_DIR_PATH = $(shell realpath -- $(BLOCKS_DIR_NAME))
+BUILDINGS_DIR_PATH = $(shell realpath -- $(BUILDINGS_DIR_NAME))
 
 FILES = $(wildcard ./src/*.c)
 OBJECTS = $(patsubst ./src/%.c, ./build/%.o, $(FILES))
@@ -11,7 +13,7 @@ LDFLAGS = -lc -lm $(shell pkg-config --libs cglm) \
 			$(shell pkg-config --libs assimp) \
 
 CPPFLAGS =
-CFLAGS = -Wall -Wextra -Wshadow -D'BLOCKS_DIR_PATH="$(BLOCKS_DIR_PATH)"'
+CFLAGS = -Wall -Wextra -Wshadow -D'BLOCKS_DIR_PATH="$(BLOCKS_DIR_PATH)"' -D'BUILDINGS_DIR_PATH="$(BUILDINGS_DIR_PATH)"'
 
 .PHONY: update urun
 
@@ -20,7 +22,8 @@ info:
 	@echo $(FILES)
 	@echo $(OBJECTS)
 	@echo $(LDFLAGS)
-	@echo "data path: $(BLOCKS_DIR_PATH)"
+	@echo "blocks: $(BLOCKS_DIR_PATH)"
+	@echo "buildings: $(BUILDINGS_DIR_PATH)"
 
 # build/main.o: src/shaders.h
 # 	@echo "shader was updated"

@@ -17,6 +17,7 @@ struct Color{
 #define GRAY                (struct Color){0.4, 0.4, 0.4, 1}
 #define RED                 (struct Color){1, 0, 0, 1}
 #define GREEN               (struct Color){0, 1, 0, 1}
+#define YELLOW              (struct Color){1, 1, 0, 1}
 #define BLUE                (struct Color){0, 0, 1, 1}
 #define PURPLE              (struct Color){N(102), 0, N(204), 1}
 #define LIGHT_PURPLE        (struct Color){N(204), 0, 1, 1}

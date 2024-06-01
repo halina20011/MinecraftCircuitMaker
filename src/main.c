@@ -90,8 +90,6 @@ int main(){
     optionPrint(options, 0);
     cmd = commandLineInit(options);
 
-    struct BlockSupervisor *blockSupervisor= blockSupervisorInit();
-
     struct Ui *ui = uiInit(g->window);
     defineUi(ui);
 
@@ -112,20 +110,26 @@ int main(){
     GLint colorUniform = getUniformLocation(shader, "color");
     printf("texture uniform %i\n", textureUniform);
 
+    useShader(shader);
+    struct BlockSupervisor *blockSupervisor = blockSupervisorInit(shader, modelUniformLocation);
+    useShader(shader);
     text = textInit(shader, &g->screenRatio);
     useShader(shader);
     interface = interfaceInit(cmd, blockSupervisor, g, text);
 
-    addBlock(blockSupervisor, PISTON, (BlockPosition){-5, 0, 0}, EAST);
-    addBlock(blockSupervisor, PISTON, (BlockPosition){-3, 0, 0}, SOUTH);
-    addBlock(blockSupervisor, PISTON, (BlockPosition){-1, 0, 0}, WEST);
-    addBlock(blockSupervisor, PISTON, (BlockPosition){1, 0, 0}, NORTH);
-    addBlock(blockSupervisor, PISTON, (BlockPosition){3, 0, 0}, UP);
-    addBlock(blockSupervisor, PISTON, (BlockPosition){5, 0, 0}, DOWN);
+    // addBlock(blockSupervisor, PISTON, (BlockPosition){-5, 0, 0}, EAST);
+    // addBlock(blockSupervisor, PISTON, (BlockPosition){-3, 0, 0}, SOUTH);
+    // addBlock(blockSupervisor, PISTON, (BlockPosition){-1, 0, 0}, NORTH);
+    // addBlock(blockSupervisor, PISTON, (BlockPosition){1, 0, 0}, WEST);
+    // addBlock(blockSupervisor, PISTON, (BlockPosition){3, 0, 0}, UP);
+    // addBlock(blockSupervisor, PISTON, (BlockPosition){5, 0, 0}, DOWN);
 
     // interfaceExportBuilding();
-    interfaceLoadBuilding();
-    buildingAdd(blockSupervisor, 0);
+    // interfaceLoadBuilding();
+    // interfaceAddBuilding();
+    buildingLoad(blockSupervisor, "/tmp/build");
+    buildingAdd(blockSupervisor, 0, (BlockPosition){0, 0, 0}, EAST);
+    useShader(shader);
 
     // for(int z = 0; z < 10; z++){
     //     for(int y = 0; y < 10; y++){
@@ -140,6 +144,9 @@ int main(){
     printf("max texture size %i\n", maxTexSize);
 
     // struct Vec3Vector *intersections = Vec3VectorInit();
+
+    GLuint elementArrayBuffer;
+    glGenBuffers(1, &elementArrayBuffer);
 
     while(!glfwWindowShouldClose(g->window)){
         float currFrame = glfwGetTime();
@@ -240,28 +247,6 @@ int main(){
         // drawPoint(interface->intersectionPoint, colorUniform);
         // vec3 blockPos = {roundf(intersectionPoint[0]), roundf(intersectionPoint[1]) + 1, roundf(intersectionPoint[2])};
         
-        // draw block selection box
-        mat4 blockMatrix = {};
-        glm_mat4_identity(blockMatrix);
-        glm_translate(blockMatrix, blockPosVec3(interface->addBlockPos));
-
-        glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)blockMatrix);
-
-        glBufferData(GL_ARRAY_BUFFER, cubeSize, cube, GL_DYNAMIC_DRAW);
-        glDrawArrays(GL_LINE_LOOP, 0, 36);
-
-        // draw add selection box
-        if(!interface->floorIntersection){
-            mat4 blockMatrix2;
-            SET_COLOR(colorUniform, BLUE);
-            glm_mat4_identity(blockMatrix2);
-            glm_translate(blockMatrix2, blockPosVec3(interface->blockPos));
-
-            glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)blockMatrix2);
-            
-            glDrawArrays(GL_LINE_LOOP, 0, 36);
-        }
-
         glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)model);
 
         SET_COLOR(colorUniform, GRAY);
@@ -271,7 +256,7 @@ int main(){
             10, -0.5, 10, 0, 0,
             10, -0.5, -10, 0, 0
         };
-        glBufferData(GL_ARRAY_BUFFER, sizeof(trig), trig, GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(trig), trig, GL_DYNAMIC_DRAW);
         glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
         // draw camera view ///////////////////////////////////////////////////////
@@ -298,25 +283,28 @@ int main(){
         glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)model);
         ////////////////////////////////////////////////////////////////////////////
 
-        glUniform4f(colorUniform, 0.5, 0.5, 0.5, 0);
-        // for(size_t i = 0; i < BLOCK_TYPES_SIZE; i++){
-        //     struct BlockType block = blockSupervisor.blockTypes[i];
-        //     // printf("%i\n", block.type);
-        //     glm_mat4_identity(model);
-        //     vec3 pos = {i * 2, 0, -2};
-        //     glm_translate(model, pos);
-        //     // glm_translate(model, cubePositions[i]);
-        //     glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)model);
-        //     drawBlock(block);
+        // for(int z = 0; z < 3; z++){
+        //     for(int y = 0; y < 3; y++){
+        //         for(int x = 0; x < 3; x++){
+        //             vec3 start = {2, 2, -1};
+        //             vec3 end = {z - 1 + 2, y - 1 + 2, x - 1 - 1};
+        //             drawLineWeight(start, end, shader->vbo, elementArrayBuffer, modelUniformLocation);
+        //         }
+        //     }
         // }
+        // vec3 a = {-5.500000, -0.500000, -0.500000};
+        // vec3 b = {5.500000, -0.500000, -0.500000}; 
+        // drawLineWeight(a, b, shader->vbo, elementArrayBuffer, modelUniformLocation);
 
-        drawChunks(blockSupervisor);
-        drawBlocks(blockSupervisor, modelUniformLocation, textureUniform);
-        buildingDraw(blockSupervisor, modelUniformLocation);
+        interfaceDraw(modelUniformLocation, colorUniform, shader->vbo, elementArrayBuffer);
+        glUniform4f(colorUniform, 0, 0, 0, 0);
+        // drawChunks(blockSupervisor);
+        useShader(shader);
+        drawBlocks(blockSupervisor);
+        buildingDraw(blockSupervisor);
+        useShader(shader);
         
         // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-        // drawBlocks(&blockSupervisor, modelUniformLocation);
 
         glDisable(GL_DEPTH_TEST);
         // glDepthMask(GL_FALSE);

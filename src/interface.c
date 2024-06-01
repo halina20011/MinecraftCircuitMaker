@@ -10,7 +10,10 @@ struct Interface *interfaceInit(struct CommandLine *cmd, struct BlockSupervisor 
     in->g = g;
     in->text = text;
 
+    in->blockIsActive = true;
     in->currBlockIndex = 0;
+    in->currBuildingIndex = 0;
+
     in->mouseClick = false;
     in->rightClick = false;
 
@@ -21,7 +24,7 @@ void interfaceAddBlock(){
     printf("adding block\n");
     uint16_t blockType = interface->cmd->optionsIndicies[2];
     // vec3 interface->addBlockPos
-    addBlock(interface->bs, blockType, interface->addBlockPos, EAST);
+    addBlock(interface->bs, blockType, interface->addBlockPos, interface->facing);
 }
 
 void interfaceExportBuilding(){
@@ -44,27 +47,66 @@ void interfaceLoadBuilding(){
     buildingLoad(interface->bs, path);
 }
 
+void interfaceAddBuilding(){
+    if(interface->bs->buildingTypes->size){
+        buildingAdd(interface->bs, interface->bs->buildingTypes->data[interface->currBuildingIndex]->id, interface->addBlockPos, EAST);
+    }
+}
+
 void interfaceLoadScene(){
     printf("exporting as scene");
 }
 
 void interfaceProcess(struct Interface *in, GLint modelUniformLocation){
     // draw selected block
-    char *currBlock = in->bs->blockTypes[in->currBlockIndex].idStr;
+    char *currName = NULL;
+    if(in->blockIsActive && in->bs->availableBlockTypesSize){
+        currName = in->bs->blockTypes[in->currBlockIndex].idStr;
+    }
+    else if(in->bs->buildingTypes->size){
+        currName = in->bs->buildingTypes->data[in->currBuildingIndex]->name;
+    }
     // int s = strlen(currBlock);
     // printf("curr block %s %i\n", currBlock, s);
 
-    textDrawOnScreen(in->text, currBlock, -1, 1.f - 0.05f, modelUniformLocation);
+    if(!currName){
+        textDrawOnScreen(in->text, "(zero buildings)", -1, 1.f - 0.05f, modelUniformLocation);
+    }
+    else{
+        textDrawOnScreen(in->text, currName, -1, 1.f - 0.05f, modelUniformLocation);
+    }
+    char index[2] = {in->facing + '0', 0};
+    textDrawOnScreen(in->text, index, -1, 1.f - 0.12f, modelUniformLocation);
 
-    // place block if needef
+    if(interface->rotate){
+        if(interface->selectedBlock){
+            interface->selectedBlock->facing = interface->rotate - 1;
+        }
+        else if(interface->selectedBuilding){
+            interface->selectedBuilding->facing = interface->rotate - 1;
+        }
+
+        interface->rotate = 0;
+    }
+
+    // place block if needed
     if(interface->mouseClick){
-        addBlock(interface->bs, interface->bs->availableBlockTypes[interface->currBlockIndex], interface->addBlockPos, EAST);
+        if(interface->blockIsActive){
+            addBlock(interface->bs, interface->bs->availableBlockTypes[interface->currBlockIndex], interface->addBlockPos, interface->facing);
+        }
+        else if(interface->bs->buildingTypes->size){
+            buildingAdd(interface->bs, interface->bs->buildingTypes->data[interface->currBuildingIndex]->id, interface->addBlockPos, interface->facing);
+        }
         interface->mouseClick = false;
     }
     if(interface->rightClick){
-        // printf("right click\n");
-        if(!interface->floorIntersection){
-            deleteBlock(in->bs, interface->blockPos);
+        if(interface->blockIntersection){
+            blockDelete(in->bs, interface->blockPos);
+        }
+        else if(interface->buildingIntersection){
+            buildingDelete(interface->bs, interface->selectedBuilding);
+            interface->selectedBuilding = NULL;
+            interface->buildingIntersection = false;
         }
         interface->rightClick = false;
     }
@@ -148,34 +190,38 @@ void interfaceCursor(mat4 projectionMatrix, mat4 viewMatrix, struct Camera *cam1
     //     free(intersections->data[i]);
     // }
     // intersections->size = 0;
-
+    
     float minVal = FLT_MAX;
     vec3 minIntersectionPoint = {};
     uint8_t side = 0;
 
+    vec3 direction = {};
+    glm_vec3_sub(interface->clickVec, cam1->cameraPos, direction);
+    glm_vec3_normalize(direction);
+
+    // intersection with block
     for(size_t i = 0; i < interface->bs->blocks->size; i++){
         struct Block *block = interface->bs->blocks->data[i];
         struct BlockType *blocksType = &interface->bs->blockTypes[block->id];
+
         float r = 0;
-        vec3 direction = {};
-        glm_vec3_sub(interface->clickVec, cam1->cameraPos, direction);
-        glm_vec3_normalize(direction);
         mat4 mat = {};
         glm_mat4_identity(mat);
         glm_translate(mat, (vec3){block->position[0], block->position[1], block->position[2]});
         uint8_t currSide;
-        if(blockIntersection(blocksType, cam1->cameraPos, direction, mat, &r, &currSide)){
+        if(boundingBoxIntersection(&blocksType->boundingBox, cam1->cameraPos, direction, mat, &r, &currSide)){
             // printf("intersection %zu\n", i);
-            glm_vec3_scale(direction, r, direction);
-            glm_vec3_add(direction, cam1->cameraPos, direction);
+            
+            // glm_vec3_scale(direction, r, direction);
+            // glm_vec3_add(direction, cam1->cameraPos, direction);
+            
             // drawPoint(direction, colorUniform);
             if(r < minVal){
                 minVal = r;
                 // block->position
                 ASSIGN3(minIntersectionPoint, block->position);
-                // ASSIGN3(minIntersectionPoint, direction);
                 side = currSide;
-                interface->selected = block;
+                interface->selectedBlock = block;
             }
 
             // float *v = malloc(sizeof(float) * 3);
@@ -184,12 +230,50 @@ void interfaceCursor(mat4 projectionMatrix, mat4 viewMatrix, struct Camera *cam1
         }
     }
     
+    float minValBuilding = FLT_MAX;
+    vec3 minIntersectionPointBuilding = {};
+    // intersection with a building
+    for(size_t i = 0; i < interface->bs->buildings->size; i++){
+        struct Building *b = interface->bs->buildings->data[i];
+        struct BuildingType *bt = interface->bs->buildingTypes->data[b->id];
+        // struct Block *block = interface->bs->blocks->data[i];
+        // struct BlockType *blocksType = &interface->bs->blockTypes[block->id];
+
+        float r = 0;
+
+        mat4 mat;
+        glm_mat4_identity(mat);
+        
+        glm_rotate_at(mat, blockPosVec3(b->position), glm_rad(facingToRad(b->facing)), (vec3){0, 1, 0});
+        glm_translate(mat, blockPosVec3(b->position));
+
+        uint8_t currSide;
+        if(boundingBoxIntersection(&bt->boundingBox, cam1->cameraPos, direction, mat, &r, &currSide)){
+            if(r < minValBuilding){
+                minValBuilding = r;
+                // block->position
+                ASSIGN3(minIntersectionPointBuilding, b->position);
+                side = currSide;
+                interface->selectedBuilding = b;
+            }
+        }
+    }
+    
     interface->floorIntersection = false;
-    if(minVal == FLT_MAX){
+    interface->buildingIntersection = false;
+    interface->blockIntersection = false;
+
+    if(minVal == FLT_MAX && minValBuilding == FLT_MAX){
         floorIntersection(cam1->cameraPos, interface->clickVec, &interface->addBlockPos);
         interface->floorIntersection = true;
     }
+    else if(minVal == FLT_MAX){
+        interface->buildingIntersection = true;
+        ASSIGN3(interface->blockPos, minIntersectionPointBuilding);
+    }
     else{
+        interface->blockIntersection = true;
+
         ASSIGN3(interface->blockPos, minIntersectionPoint);
         ASSIGN3(interface->addBlockPos, minIntersectionPoint);
 
@@ -209,4 +293,44 @@ void interfaceCursor(mat4 projectionMatrix, mat4 viewMatrix, struct Camera *cam1
     //     float *p = intersections->data[i];
     //     drawPoint(p, colorUniform);
     // }
+}
+
+void interfaceDraw(GLuint modelUniformLocation, GLuint colorUniform, GLuint arrayBuffer, GLuint elementArrayBuffer){
+    // draw block selection box
+    mat4 blockMatrix = {};
+    glm_mat4_identity(blockMatrix);
+    glm_translate(blockMatrix, blockPosVec3(interface->addBlockPos));
+    glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)blockMatrix);
+    
+    if(interface->bs->availableBlockTypesSize){
+        struct BlockType *bt = &interface->bs->blockTypes[interface->currBlockIndex];
+        struct BoundingBox *bb = &bt->boundingBox;
+
+        if(interface->blockIntersection && interface->selectedBlock){
+            SET_COLOR(colorUniform, YELLOW);
+            boundingBoxDraw(bb, interface->blockPos, interface->rotate, arrayBuffer, elementArrayBuffer, modelUniformLocation);
+        }
+
+        if(interface->blockIsActive){
+            SET_COLOR(colorUniform, GREEN);
+            boundingBoxDraw(bb, interface->addBlockPos, interface->facing, arrayBuffer, elementArrayBuffer, modelUniformLocation);
+        }
+    }
+
+    if(interface->bs->buildingTypes->size){
+        if(interface->buildingIntersection && interface->selectedBuilding){
+            struct Building *b = interface->selectedBuilding;
+            struct BuildingType *currBuilding = interface->bs->buildingTypes->data[b->id];
+            struct BoundingBox *boundingBoxB = &currBuilding->boundingBox;
+
+            SET_COLOR(colorUniform, YELLOW);
+            boundingBoxDraw(boundingBoxB, b->position, b->facing, arrayBuffer, elementArrayBuffer, modelUniformLocation);
+        }
+
+        if(!interface->blockIsActive){
+            struct BoundingBox *bb = &interface->bs->buildingTypes->data[interface->currBuildingIndex]->boundingBox;
+            SET_COLOR(colorUniform, GREEN);
+            boundingBoxDraw(bb, interface->addBlockPos, interface->facing, arrayBuffer, elementArrayBuffer, modelUniformLocation);
+        }
+    }
 }

@@ -16,25 +16,27 @@ gimp </br>
     - origin line
 
 - buildings
+    - relative building path
     - load building
         - as blocks
-            - ask for position
         - as building
+    - unwrap
     - export
         - export everyting as a building
 
 - UI
+    - select type with search window
     - scene objects (blocks and buildings)
     - blocks/models
     - block position
     - draw lines
     - text
         - dynamic size
-        - command line
 
 - mechanics
+    - load building in MC
+    - multi selection
     - move selected
-    - show selected building
     - undo/redo
     - copy paste selection
     - block names autocomplete
