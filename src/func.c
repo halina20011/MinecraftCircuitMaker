@@ -14,13 +14,9 @@ bool moved = false;
 // extern bool placeBlock;
 
 void processInput(){
-    if(cmd->active){
+    if(interface->activeBuffer){
         return;
     }
-
-    // if(glfwGetKey(g->window, GLFW_KEY_ENTER) == GLFW_PRESS){
-    //     placeBlock = true;
-    // }
 
     float cameraSpeed = 5.f * g->deltaTime;
     if(glfwGetKey(g->window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS){
@@ -83,64 +79,79 @@ void keyCallback(GLFWwindow *w, int key, int scancode, int action, int mods){
         return;
     }
 
-    // switch camera
-    if(key == GLFW_KEY_TAB){
-        g->camIndex = (g->camIndex + 1) % g->camSize;
-        g->camera = g->cams[g->camIndex];
-    }
-
-    // switch block type
-    if(interface->blockIsActive){
-        UPDATE_CURRENT(interface->currBlockIndex, interface->bs->availableBlockTypesSize);
-    }
-    else if(interface->bs->buildingTypes->size){
-        UPDATE_CURRENT(interface->currBuildingIndex, interface->bs->buildingTypes->size);
-    }
-
     if(key == GLFW_KEY_LEFT || key == GLFW_KEY_RIGHT){
         interface->blockIsActive = !interface->blockIsActive;
     }
 
-    if(!cmd->active){
+    if(!interface->activeUi){
+        // switch camera
+        if(key == GLFW_KEY_TAB){
+            g->camIndex = (g->camIndex + 1) % g->camSize;
+            g->camera = g->cams[g->camIndex];
+        }
+
+        // switch block type
+        if(interface->blockIsActive){
+            UPDATE_CURRENT(interface->currBlockIndex, interface->bs->availableBlockTypesSize);
+        }
+        else if(interface->bs->buildingTypes->size){
+            UPDATE_CURRENT(interface->currBuildingIndex, interface->bs->buildingTypes->size);
+        }
+    }
+
+    if(!interface->activeBuffer){
         return;
     }
 
-    // start command line
-    if(key == GLFW_KEY_BACKSPACE && cmd->commandSize){
-        cmd->command[--cmd->commandSize] = 0;
-        if(!cmd->commandSize){
-            cmd->active = false;
+    // start buffer line
+    if(key == GLFW_KEY_BACKSPACE && interface->bufferSize){
+        interface->buffer[--interface->bufferSize] = 0;
+        if(!interface->bufferSize){
+            interface->activeBuffer = false;
+            interface->activeCmd = false;
+            interface->activeUi = false;
         }
     }
     else if(glfwGetKey(w, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS){
         switch(key){
             case 'C':
                 // printf("copy text\n");
-                commandLineCopy(cmd, w);
+                commandLineCopy(w);
                 break;
             case 'V':
-                commandLinePaste(cmd);
+                commandLinePaste();
                 break;
             case 'W':
                 // printf("remove word\n");
-                for(; cmd->commandSize != 0; cmd->commandSize--){
-                    if(cmd->command[cmd->commandSize] == ' '){
+                for(; interface->bufferSize != 0; interface->bufferSize--){
+                    if(interface->buffer[interface->bufferSize] == ' '){
                         break;
                     } 
                 }
-                cmd->command[cmd->commandSize] = '\0';
+                interface->buffer[interface->bufferSize] = '\0';
                 break;
         }
     }
     else if(key == GLFW_KEY_ENTER){
-        cmd->active = false;
-        // printf("%s\n", cmd->command);
-        commandLineExecute(cmd);
-        cmd->commandSize = 0;
+        // printf("%s\n", cmd->buffer);
+        if(!interface->activeUi){
+            commandLineExecute(cmd);
+        }
+        else{
+            interfaceSelectBlock();
+        }
+        interface->activeBuffer = false;
+        interface->activeCmd = false;
+        interface->activeUi = false;
+        interface->bufferSize = 0;
+        interface->buffer[0] = 0;
     }
     else if(key == GLFW_KEY_ESCAPE){
-        cmd->commandSize = 0;
-        cmd->active = false;
+        interface->buffer[0] = 0;
+        interface->bufferSize = 0;
+        interface->activeBuffer = false;
+        interface->activeCmd = false;
+        interface->activeUi = false;
     }
 }
 
@@ -155,34 +166,39 @@ void characterCallback(GLFWwindow *window, uint32_t codepoint){
         return;
     }
 
-    if(!cmd->active && glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS){
-        interface->facing++;
-        if(interface->facing == 4){
-            interface->facing = 0;
+    if(!interface->activeBuffer){
+        if(glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS){
+            interface->facing++;
+            if(interface->facing == 4){
+                interface->facing = 0;
+            }
+        }
+
+        if('1' <= codepoint && codepoint <= '6'){
+            interface->rotate = c - '0';
         }
     }
 
-    if(!cmd->active && '1' <= codepoint && codepoint <= '6'){
-        interface->rotate = c - '0';
+    if(!interface->activeCmd && c == ' '){
+        interface->activeUi = !interface->activeUi;
+        interface->activeBuffer = interface->activeUi;
+        interface->bufferSize = 0;
+        interface->buffer[0] = 0;
+        return;
     }
 
-    // start command line
-    if(c == '/' && !cmd->active){
-        cmd->active = true;
-        commandLineAdd(cmd, '/');
+    // start buffer line
+    if(!interface->activeCmd && !interface->activeUi && c == '/'){
+        interfaceBuffer('/');
+        interface->activeBuffer = true;
+        interface->activeCmd = true;
     }
-    else if(cmd->active && isprint(c)){
-        // if(isalpha(key)){
-        //     c = tolower(key);
-            // if(c == 'c' && glfwGetKey)(
-        //     if(glfwGetKey(w, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS){
-        //         c = toupper(c);
-        //     }
-        // }
-        commandLineAdd(cmd, c);
-        struct Option *option = commandLineCurrOption(cmd);
-        // printf("option %p\n", option);
-        optionPrint(option, 0);
+    else if(interface->activeBuffer && isprint(c)){
+        interfaceBuffer(c);
+        if(!interface->activeUi){
+            struct Option *option = commandLineCurrOption(cmd);
+            optionPrint(option, 0);
+        }
     }
 }
 
@@ -262,17 +278,8 @@ void mouseButtonCallback(GLFWwindow *w, int button, int action, int mods){
         moved = false;
     }
 
-    // if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS){
-    //     moved = false;
-    //     prevX = interface->screenX;
-    //     prevY = interface->screenY;
-    //     // glfwGetCursorPos(g->window, &prevX, &prevY);
-    // }
     if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE && !moved){
-        // glfwGetCursorPos(g->window, &interface->screenX, &interface->screenY);
-        // if(interface->screenX == prevX && interface->screenY == prevY){
-            interface->mouseClick = true;
-        // }
+        interface->mouseClick = true;
     }
 
     if(button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE && !moved){

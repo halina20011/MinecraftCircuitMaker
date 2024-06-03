@@ -35,9 +35,15 @@ struct Text{
     struct TextInfo asciiMap[ASCII_TABLE_SIZE];
     GLuint VAO, VBO;
     float *screenRatio;
+    float height, scale;
 };
 
 struct Text *textInit(struct Shader *shader, float *screenRatio);
+
+float textSetHeightPx(uint16_t height);
+float textSetHeight(float height);
+
+float textGetWidth(char *str);
 
 float textDrawOnScreen(struct Text *text, char *str, float x, float y, GLint modelUniformLocation);
 void textDraw(struct Text *text, char *str, float x, float y, float size);

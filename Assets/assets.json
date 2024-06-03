@@ -41,7 +41,19 @@
     "redstoneLamp":{
         "modelName": "redstoneLamp",
         "isCollection": false,
-        "id": "target",
+        "id": "redstone_lamp",
         "index": 5
+    },
+    "redstoneRepeater": {
+        "modelName": "redstoneRepeater",
+        "isCollection": false,
+        "id": "repeater",
+        "index": 6
+    },
+    "redstoneComparator": {
+        "modelName": "redstoneComparator",
+        "isCollection": false,
+        "id": "comparator",
+        "index": 7
     }
 }

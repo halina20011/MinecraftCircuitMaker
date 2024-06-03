@@ -190,7 +190,7 @@ void drawBlocks(struct BlockSupervisor *bs);
 
 // BLOCK TYPE
 bool loadBlock(struct BlockSupervisor *bs, const char fileName[], struct BlockType *block);
-char **blockNames();
+char **blockIds();
 BlockTypeId blockId(struct BlockSupervisor *bs, const char *id);
 void blockTypeBoundingBox(struct BoundingBox *bb, float *data, size_t size);
 struct BlockType *loadBlocks(struct BlockSupervisor *bs, bool **set, size_t *rDataSize);

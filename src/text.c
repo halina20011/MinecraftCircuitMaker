@@ -1,12 +1,16 @@
 #include "text.h"
 
+#include "interface.h"
+
+extern struct Interface *interface;
+
 struct Text *textInit(struct Shader *shader, float *screenRatio){
     struct Text *text = malloc(sizeof(struct Text));
     text->screenRatio = screenRatio;
 
     FILE *file = fopen("Assets/text.bin", "rb");
     if(!file){
-        fprintf(stderr, "unable to open file: %s\n", "sdfds");
+        fprintf(stderr, "unable to open file: %s\n", "Assets/text.bin");
         exit(1);
     }
 
@@ -75,6 +79,26 @@ struct Text *textInit(struct Shader *shader, float *screenRatio){
     return text;
 }
 
+float textSetHeightPx(uint16_t height){
+    float h = ((float)height / (float)interface->g->height);
+    interface->text->height = h;
+    float s = h * 2.0f;
+    interface->text->scale = s;
+    // printf("%i %f %f\n", height, h, s);
+    return h * 2;
+}
+
+float textSetHeight(float height){
+    interface->text->height = height;
+    interface->text->scale = height * 2.0f;
+    return height * 2.0f;
+}
+
+float textGetWidth(char *str){
+    size_t s = strlen(str);
+    return (float)s * interface->text->scale * interface->text->asciiMap[(int)'H'].width;
+}
+
 float textDrawOnScreen(struct Text *text, char *str, float x, float y, GLint modelUniformLocation){
     glBindVertexArray(text->VAO);
     glBindBuffer(GL_ARRAY_BUFFER, text->VBO);
@@ -83,11 +107,12 @@ float textDrawOnScreen(struct Text *text, char *str, float x, float y, GLint mod
     mat4 model;
     glm_mat4_identity(model);
     glm_translate(model, (vec3){x, y, 0});
-    float s = 0.05;
+    float s = text->scale;
     glm_scale(model, (vec3){s, s * (*(text->screenRatio)), s});
 
     float currOffset = 0;
-    for(int i = 0; str[i]; i++){
+    int i = 0;
+    for(; str[i]; i++){
         glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)model);
         if(str[i] == ' '){
             float offset = text->asciiMap[(int)'H'].width;
@@ -107,6 +132,6 @@ float textDrawOnScreen(struct Text *text, char *str, float x, float y, GLint mod
 
         currOffset += offset * s;
     }
-
+    
     return currOffset;
 }

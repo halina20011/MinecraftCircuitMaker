@@ -10,12 +10,24 @@ struct Interface *interfaceInit(struct CommandLine *cmd, struct BlockSupervisor 
     in->g = g;
     in->text = text;
 
+    in->buffer = malloc(sizeof(char) * (COMMAND_MAX_SIZE + 1));
+    in->bufferSize = 0;
+
+    in->activeBuffer = false;
+    in->activeCmd = false;
+    in->activeUi = false;
+
     in->blockIsActive = true;
     in->currBlockIndex = 0;
     in->currBuildingIndex = 0;
+    in->selectedBlock = NULL;
+    in->selectedBuilding = NULL;
 
     in->mouseClick = false;
     in->rightClick = false;
+
+    in->rotate = 0;
+    in->facing = 0;
 
     return in;
 }
@@ -29,7 +41,7 @@ void interfaceAddBlock(){
 
 void interfaceExportBuilding(){
     struct CommandLine *cmd = interface->cmd;
-    char *path = &cmd->command[cmd->optionsIndicies[2]];
+    char *path = &interface->buffer[cmd->optionsIndicies[2]];
     printf("exporting as building\n");
     printf("path '%s'\n", path);
     exportAsBuilding(interface->bs, path);
@@ -41,7 +53,7 @@ void interfaceExportScene(){
 
 void interfaceLoadBuilding(){
     struct CommandLine *cmd = interface->cmd;
-    char *path = &cmd->command[cmd->optionsIndicies[2]];
+    char *path = &interface->buffer[cmd->optionsIndicies[2]];
     printf("loading building\n");
     printf("path '%s'\n", path);
     buildingLoad(interface->bs, path);
@@ -57,8 +69,47 @@ void interfaceLoadScene(){
     printf("exporting as scene");
 }
 
-void interfaceProcess(struct Interface *in, GLint modelUniformLocation){
-    // draw selected block
+void interfaceSelectBlock(){
+    char *str = interface->buffer;
+    interface->activeUi = false;
+    printf("block %s\n", str);
+
+    struct BlockSupervisor *bs = interface->bs;
+    if(interface->blockIsActive && bs->availableBlockTypesSize){
+        for(BlockTypeId i = 0; i < bs->availableBlockTypesSize; i++){
+            BlockTypeId id = bs->availableBlockTypes[i];
+            struct BlockType *bt = &bs->blockTypes[id];
+            if(strncmp(interface->buffer, bt->idStr, interface->bufferSize) == 0){
+                interface->currBlockIndex = id;
+                return;
+            }
+        }
+    }
+    else if(!interface->blockIsActive && bs->buildingTypes->size){
+        for(BlockTypeId i = 0; i < bs->buildingTypes->size; i++){
+            BlockTypeId id = bs->buildingTypes->data[i]->id;
+            struct BuildingType *bt = bs->buildingTypes->data[id];
+            if(strncmp(interface->buffer, bt->name, interface->bufferSize) == 0){
+                interface->currBlockIndex = id;
+                return;
+            }
+        }
+
+    }
+}
+
+void interfaceBuffer(char c){
+    if(COMMAND_MAX_SIZE <= interface->bufferSize){
+        fprintf(stderr, "command is too long max is %i", COMMAND_MAX_SIZE);
+    }
+    else{
+        interface->buffer[interface->bufferSize++] = c;
+        interface->buffer[interface->bufferSize] = '\0';
+    }
+}
+
+void interfaceProcess(struct Interface *in, GLint modelUniformLocation, GLint colorUniform){
+    // draw curr object's name
     char *currName = NULL;
     if(in->blockIsActive && in->bs->availableBlockTypesSize){
         currName = in->bs->blockTypes[in->currBlockIndex].idStr;
@@ -66,23 +117,44 @@ void interfaceProcess(struct Interface *in, GLint modelUniformLocation){
     else if(in->bs->buildingTypes->size){
         currName = in->bs->buildingTypes->data[in->currBuildingIndex]->name;
     }
+
+    // draw cursor position
+    char posBuffer[101];
+    snprintf(posBuffer, 100, "%i %i %i", 
+            in->addBlockPos[0], in->addBlockPos[1], in->addBlockPos[2]
+    );
+    // printf("pos %s\n", posBuffer);
+    float textWidth = textGetWidth(posBuffer);
+    float textHeight = textSetHeightPx(25);
+    // printf("%f %f\n", textWidth, textHeight);
+    textDrawOnScreen(in->text, posBuffer, 1.0f - textWidth, -1.0f + textHeight, modelUniformLocation);
+
+    float offset = textSetHeightPx(25);
+    if(!currName){
+        textDrawOnScreen(in->text, "(zero buildings)", -1, 1.f - offset, modelUniformLocation);
+    }
+    else{
+        textDrawOnScreen(in->text, currName, -1, 1.f - offset, modelUniformLocation);
+    }
+
+    char index[2] = {in->facing + '0', 0};
+    textDrawOnScreen(in->text, index, -1, 1.f - 2.0f * offset, modelUniformLocation);
+
+    if(interface->activeCmd && !interface->activeUi){
+        commandLineDraw(interface->cmd, modelUniformLocation, colorUniform);
+        // SET_COLOR(colorUniform, WHITE);
+    }
+
     // int s = strlen(currBlock);
     // printf("curr block %s %i\n", currBlock, s);
 
-    if(!currName){
-        textDrawOnScreen(in->text, "(zero buildings)", -1, 1.f - 0.05f, modelUniformLocation);
-    }
-    else{
-        textDrawOnScreen(in->text, currName, -1, 1.f - 0.05f, modelUniformLocation);
-    }
-    char index[2] = {in->facing + '0', 0};
-    textDrawOnScreen(in->text, index, -1, 1.f - 0.12f, modelUniformLocation);
-
+    // printf("%i %i\n", interface->facing, interface->rotate);
     if(interface->rotate){
-        if(interface->selectedBlock){
+        // printf("%p %p\n", interface->selectedBlock, interface->selectedBuilding);
+        if(interface->blockIntersection && interface->selectedBlock){
             interface->selectedBlock->facing = interface->rotate - 1;
         }
-        else if(interface->selectedBuilding){
+        else if(interface->buildingIntersection && interface->selectedBuilding){
             interface->selectedBuilding->facing = interface->rotate - 1;
         }
 
@@ -194,6 +266,9 @@ void interfaceCursor(mat4 projectionMatrix, mat4 viewMatrix, struct Camera *cam1
     float minVal = FLT_MAX;
     vec3 minIntersectionPoint = {};
     uint8_t side = 0;
+
+    interface->selectedBlock = NULL;
+    interface->selectedBuilding = NULL;
 
     vec3 direction = {};
     glm_vec3_sub(interface->clickVec, cam1->cameraPos, direction);

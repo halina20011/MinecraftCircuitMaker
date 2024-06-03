@@ -32,10 +32,6 @@ struct CommandLine *commandLineInit(struct Option *rootOption){
     cmd->matchSize = 0;
 
     cmd->rootOption = rootOption;
-    cmd->state = 0;
-    cmd->command = malloc(sizeof(char) * (COMMAND_MAX_SIZE + 1));
-    cmd->commandSize = 0;
-    cmd->active = false;
 
     return cmd;
 }
@@ -120,25 +116,27 @@ void optionPrint(struct Option *option, uint8_t level){
 }
 
 void commandLineDraw(struct CommandLine *cmd, GLint modelUniformLocation, GLint colorUniform){
-    float endPos = textDrawOnScreen(interface->text, cmd->command, -1, -1.0f + 0.02f, modelUniformLocation);
+    float h = textSetHeightPx(20);
+    float offset = h * 0.3f;
+    float endPos = textDrawOnScreen(interface->text, interface->buffer, -1, -1.0f + offset, modelUniformLocation);
     char *end = "|";
-    textDrawOnScreen(interface->text, end, -1.0f + endPos, -1.0f + 0.02f, modelUniformLocation);
+    textDrawOnScreen(interface->text, end, -1.0f + endPos, -1.0f + offset, modelUniformLocation);
 }
 
-void commandLinePaste(struct CommandLine *cmd){
+void commandLinePaste(){
     const char *clipboardText = glfwGetClipboardString(interface->g->window);
     if(!clipboardText){
         return;
     }
     // printf("clip content %s", clipboardText);
-    for(size_t i = 0; clipboardText[i] && cmd->commandSize < COMMAND_MAX_SIZE; i++){
-        cmd->command[cmd->commandSize++] = clipboardText[i];
+    for(size_t i = 0; clipboardText[i] && interface->bufferSize < COMMAND_MAX_SIZE; i++){
+        interface->buffer[interface->bufferSize++] = clipboardText[i];
     }
-    cmd->command[cmd->commandSize] = '\0';
+    interface->buffer[interface->bufferSize] = '\0';
 }
 
-void commandLineCopy(struct CommandLine *cmd, struct GLFWwindow *w){
-    char *c = &cmd->command[1];
+void commandLineCopy(struct GLFWwindow *w){
+    char *c = &interface->buffer[1];
     glfwSetClipboardString(w, c);
 }
 
@@ -157,11 +155,11 @@ size_t countSize(char *c){
 struct Option *commandLineCurrOption(struct CommandLine *cmd){
     struct Option *curr = cmd->rootOption;
     bool found = false;
-    char *command = &cmd->command[1];
+    char *buffer = &interface->buffer[1];
     printf("===== start =====\n");
     size_t matchSize = 0;
     while(curr){
-        size_t size = countSize(command);
+        size_t size = countSize(buffer);
         found = false;
         if(size == 0){
             printf("no more characters, end\n");
@@ -177,8 +175,8 @@ struct Option *commandLineCurrOption(struct CommandLine *cmd){
             struct Option *currOption = curr->options[i];
             if(currOption->type == OPTION_SINGLE){
                 size_t sSize = strlen(currOption->name);
-                printf("trying '%s' == '%s'\n", currOption->name, command);
-                if(size == sSize && strncmp(command, currOption->name, size) == 0){
+                printf("trying '%s' == '%s'\n", currOption->name, buffer);
+                if(size == sSize && strncmp(buffer, currOption->name, size) == 0){
                     printf("matched %s\n", currOption->name);
                     curr = currOption;
                     found = true;
@@ -188,8 +186,8 @@ struct Option *commandLineCurrOption(struct CommandLine *cmd){
             else if(currOption->type == OPTION_MULTY){
                 for(size_t o = 0; o < currOption->namesSize && !found; o++){
                     size_t sSize = strlen(currOption->names[o]);
-                    printf("trying '%s' == '%s'\n", currOption->names[o], command);
-                    if(size == sSize && strncmp(command, currOption->names[o], size) == 0){
+                    printf("trying '%s' == '%s'\n", currOption->names[o], buffer);
+                    if(size == sSize && strncmp(buffer, currOption->names[o], size) == 0){
                         printf("matched %s\n", currOption->names[o]);
                         curr = currOption;
                         found = true;
@@ -212,12 +210,12 @@ struct Option *commandLineCurrOption(struct CommandLine *cmd){
         else{
             // argument match
             if(argument && !found){
-                cmd->optionsIndicies[matchSize++] = command - &cmd->command[1] + 1;
+                cmd->optionsIndicies[matchSize++] = buffer - &interface->buffer[1] + 1;
                 printf("matched argument with size %zu\n", size);
                 curr = argOption;
             }
-            bool space = (command[size] == ' ');
-            command = &command[size + space];
+            bool space = (buffer[size] == ' ');
+            buffer = &buffer[size + space];
         }
     }
 

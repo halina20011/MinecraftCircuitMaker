@@ -9,16 +9,34 @@
 #define MAX(a, b) ((a < b) ? b : a)
 #define MIN(a, b) ((a < b) ? a : b)
 
-char **blockNames(){
-    char **names = malloc(sizeof(char**) * BLOCK_TYPES_SIZE);
-    names[REDSTONE_WIRE] = strdup("redstone_wire");
-    names[REDSTONE_TORCH] = strdup("redstone_torch");
-    names[PISTON] = strdup("piston");
-    names[STICKY_PISTON] = strdup("sticky_piston");
-    names[TARGET] = strdup("target");
+char **blockIds(){
+    char **ids = calloc(BLOCK_TYPES_SIZE, sizeof(char*));
+    ids[REDSTONE_WIRE] = strdup("redstone_wire");
+    ids[REDSTONE_TORCH] = strdup("redstone_torch");
+    ids[PISTON] = strdup("piston");
+    ids[STICKY_PISTON] = strdup("sticky_piston");
+    ids[TARGET] = strdup("target");
+    ids[REDSTONE_LAMP] = strdup("redstone_lamp");
+    ids[REPEATER] = strdup("repeater");
+    ids[COMPARATOR] = strdup("comparator");
 
-    return names;
+    return ids;
 }
+
+// char **blockNames(char **blockIds){
+//     char **names = malloc(sizeof(char*) * BLOCK_TYPES_SIZE);
+//     for(BlockTypeId id = 0; id < BLOCK_TYPES_SIZE; id++){
+//         names[id] = NULL;
+//         if(names[id]){
+//             char *name = strdup(blockIds[id]);
+//             for(size_t i = 0; name[i]; i++){
+//                 if(name[i] == '_'){
+//                     name[i] = ' '
+//                 }
+//             }
+//         }
+//     }
+// }
 
 BlockTypeId blockId(struct BlockSupervisor *bs, const char *id){
     for(uint16_t i = 0; i < BLOCK_TYPES_SIZE; i++){
@@ -26,7 +44,7 @@ BlockTypeId blockId(struct BlockSupervisor *bs, const char *id){
             return i;
         }
     }
-    fprintf(stderr, "block type was not found %s\n", id);
+    fprintf(stderr, "block type '%s' was not found\n", id);
     return BLOCK_NOT_FOUND;
 }
 

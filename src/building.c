@@ -86,6 +86,7 @@ void buildingDelete(struct BlockSupervisor *bs, struct Building *building){
 
 void buildingLoad(struct BlockSupervisor *bs, const char fileName[]){
     FILE *f = fopen(fileName, "r");
+    printf("opening %s building file\n", fileName);
     if(!f){
         fprintf(stderr, "failed to open building");
         return;

@@ -9,16 +9,6 @@
 
 #define COMMAND_MAX_SIZE 1024
 
-#define commandLineAdd(cmd, c)do{\
-    if(COMMAND_MAX_SIZE <= cmd->commandSize){\
-        fprintf(stderr, "command is too long max is %i", COMMAND_MAX_SIZE);\
-    }\
-    else{\
-        cmd->command[cmd->commandSize++] = c;\
-        cmd->command[cmd->commandSize] = '\0';\
-    }\
-}while(0)
-
 enum OptionType{
     OPTION_SINGLE,
     OPTION_MULTY,
@@ -36,10 +26,6 @@ struct Option{
 };
 
 struct CommandLine{
-    char *command;
-    size_t commandSize;
-    bool active;
-    uint8_t state;
     struct Option *rootOption;
     size_t *optionsIndicies;
     size_t matchSize;
@@ -48,8 +34,8 @@ struct CommandLine{
 struct CommandLine *commandLineInit(struct Option *rootOption);
 void commandLineDraw(struct CommandLine *cmd, GLint modelUniformLocation, GLint colorUniform);
 
-void commandLinePaste(struct CommandLine *cmd);
-void commandLineCopy(struct CommandLine *cmd, struct GLFWwindow *w);
+void commandLinePaste();
+void commandLineCopy(struct GLFWwindow *w);
 
 struct Option *commandLineCurrOption(struct CommandLine *cmd);
 void commandSugestion(struct CommandLine *cmd, struct Option *o, bool *valid);

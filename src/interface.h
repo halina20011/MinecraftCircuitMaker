@@ -15,6 +15,10 @@ struct Interface{
     double screenX, screenY;
     bool mouseClick, rightClick;
 
+    bool activeBuffer, activeCmd, activeUi;
+    char *buffer;
+    size_t bufferSize;
+
     // block
     bool blockIsActive;
     BlockTypeId currBlockIndex;
@@ -41,6 +45,9 @@ void interfaceExportScene();
 void interfaceLoadBuilding();
 void interfaceLoadScene();
 
-void interfaceProcess(struct Interface *in, GLint modelUniformLocation);
+void interfaceSelectBlock();
+
+void interfaceBuffer(char c);
+void interfaceProcess(struct Interface *in, GLint modelUniformLocation, GLint colorUniform);
 
 #endif

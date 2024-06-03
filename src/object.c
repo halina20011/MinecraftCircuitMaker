@@ -24,7 +24,7 @@ VECTOR_TYPE_FUNCTIONS(size_t, HistogramVector);
 struct BlockSupervisor *blockSupervisorInit(struct Shader *shader, GLint modelUniformLocatio){
     struct BlockSupervisor *bs = malloc(sizeof(struct BlockSupervisor));
 
-    bs->blockTypesNames = blockNames();
+    bs->blockTypesNames = blockIds();
     size_t dataSize = 0;
     bool *set;
     // load all blocks that are in the directory
@@ -214,12 +214,31 @@ bool boundingBoxIntersection(struct BoundingBox *bb, vec3 rayOrigin, vec3 rayDir
     return true;
 }
 
+void absolutePath(char path[], char result[]){
+    result[0] = 0;
+
+    if(path[0] != '/'){
+        strcat(result, BUILDINGS_DIR_PATH);
+        size_t s = strlen(result);
+        if(result[s - 1] != '/'){
+            result[s] = '/';
+            result[++s] = 0;
+        }
+        
+        printf("%s\n", result);
+    }
+
+    strcat(result, path);
+    printf("%s\n", result);
+}
+
 // export options
 //  - building has only blocks, all buildings are unwrapped
 //  - scene can have blocks and buildings
 
-void exportAsBuilding(struct BlockSupervisor *bs, char pat[]){
-    const char path[] = "/tmp/build";
+void exportAsBuilding(struct BlockSupervisor *bs, char path[]){
+    char fullPath[PATH_MAX];
+    absolutePath(path, fullPath);
     // char *buildingName = basename(path);
     // BuildingPathSize buildingNameSize = strlen(buildingName);
     // if(!buildingName){
@@ -227,9 +246,9 @@ void exportAsBuilding(struct BlockSupervisor *bs, char pat[]){
     //     return;
     // }
 
-    FILE *f = fopen(path, "wb");
+    FILE *f = fopen(fullPath, "wb");
     if(!f){
-        fprintf(stderr, "failed to open file '%s'\n", path);
+        fprintf(stderr, "failed to open file '%s'\n", fullPath);
         return;
     }
 
@@ -237,7 +256,7 @@ void exportAsBuilding(struct BlockSupervisor *bs, char pat[]){
     // fwrite(buildingName, sizeof(BuildingPath), 1, f);
     exportBlocks(bs, f, true);
 
-    printf("exported succesfully\n");
+    printf("exported building %s\n", fullPath);
     fclose(f);
 }
 
